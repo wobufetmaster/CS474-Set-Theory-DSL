@@ -1,5 +1,5 @@
-# CS474HW1
-##Set theory DSL for CS 474
+# CS474HW2
+##Set theory DSL with class constructs for CS 474
 Written by Sean Stiely on
 2/11/2022 for CS 474
 ##Building and Install:
