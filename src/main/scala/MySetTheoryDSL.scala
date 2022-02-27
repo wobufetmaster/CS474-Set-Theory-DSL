@@ -7,11 +7,14 @@ import scala.collection.mutable
 object MySetTheoryDSL:
   type BasicType = Any
 
-  class abstractClass(): //Contains all of the information for a class
-    val method_map: collection.mutable.Map[String, Seq[setExp]] = collection.mutable.Map() //Methods for this class
-    val field_map: collection.mutable.Map[String, assignRHS] = collection.mutable.Map() //Fields for this class
-    val class_hierarchy: mutable.Stack[String] = new mutable.Stack[String]() //Stack of Strings that shows all of the classes this class inherits from
+  class abstractClass(p: Option[String]): //Contains all of the information for a class
+    val method_map: collection.mutable.Map[String, abstractMethod] = collection.mutable.Map() //Methods for this class
+    val field_map: collection.mutable.Map[String, setExp] = collection.mutable.Map() //Fields for this class
+    val parent: Option[String] = p
 
+  class abstractMethod(a: Seq[String], b: Seq[setExp]):
+    val args: Seq[String] = a
+    val body: Seq[setExp] = b
 
   private val macro_map: collection.mutable.Map[String, setExp] = collection.mutable.Map()
   private val scope_map: collection.mutable.Map[(String,Option[String]), Set[Any]] = collection.mutable.Map()
@@ -19,43 +22,38 @@ object MySetTheoryDSL:
 
 
   private val vmt: collection.mutable.Map[String, abstractClass] = collection.mutable.Map() //Virtual method table
-
   private val object_binding: collection.mutable.Map[(String,Option[String]), abstractClass] = collection.mutable.Map() //Binds names to instances of objects
-
-
 
 
   def get_scope(name: String): Option[String] = //Walk up through the scope stack and find the first scope where our name is defined.
     current_scope.find(x => (scope_map get(name, Some(x))).isDefined)
 
+  enum argExp:
+    case Args(args: String*)
+    case Arg(arg: setExp)
 
   enum classBodyExp:
     case Field(name: String)
-    case Method(name: String, body: setExp*)
+    case Method(name: String,args: argExp.Args, body: setExp*)
     case ClassDef(name: String, parent: Extends, constructor: Constructor, args: classBodyExp*)
 
-    def eval(): Any = {
-
+    def eval(): Unit = {
       this match {
         case ClassDef(name,Extends(parent),Constructor(cBody*),args*) => {
-          val myClass = new abstractClass()
-          parent match {
-            case Some(value) => myClass.class_hierarchy.addAll(vmt(value).class_hierarchy).push(name) //Add the new value to the inheritance stack, and add the whole thing to our class
-            case None => myClass.class_hierarchy.push(name)
-          }
+          val myClass = new abstractClass(parent)
+          vmt.update(name, myClass)
+          current_scope.push(name)
           for (arg <- args) {
             arg.eval()
-            arg match {
-              case Field(f) => //println(f)
-                myClass.field_map.update(f,assignRHS.Set(Insert()))
-              case Method(n,e*) => myClass.method_map.update(n, e)
-            }
           }
-          vmt.update(name, myClass)
-          cBody.foldLeft(Set())((v1,v2) => v1 | v2.eval())
+
+          cBody.foldLeft(Set())((v1,v2) => v1 | v2.eval()) //Evaluate the constructor
+          current_scope.pop()
         }
-        case Field(str) =>
-        case Method(str,body) =>
+        case Field(name) => vmt(current_scope.head).field_map.update(name,Insert())
+        case Method(name,argExp.Args(args*),body*) =>
+          val myMethod = new abstractMethod(args,body)
+          vmt(current_scope.head).method_map.update(name, myMethod)
       }
     }
 
@@ -65,45 +63,17 @@ object MySetTheoryDSL:
     case Set(set: setExp)
 
   enum classExp:
-    case ClassDef(name: String, parent: Extends, constructor: Constructor, args: classBodyExp*)
     case Constructor(body: setExp*) //Only one
     case Extends(name: Option[String]) //Only one
 
-    //def ClassDef(name: String, parent: Extends, constructor: Constructor, args: classExp*): None
-
-
-
-    def eval(): Any = {
-      this match {
-        case ClassDef(name,Extends(parent),Constructor(cBody*),args*) => {
-          val myClass = new abstractClass()
-          parent match {
-            case Some(value) => myClass.class_hierarchy.addAll(vmt(value).class_hierarchy).push(name) //Add the new value to the inheritance stack, and add the whole thing to our class
-            case None => myClass.class_hierarchy.push(name)
-          }
-          for (arg <- args) {
-            import MySetTheoryDSL.classBodyExp.*
-            arg match {
-              case Field(f) => //println(f)
-                myClass.field_map.update(f,assignRHS.Set(Insert()))
-              case Method(n,e*) => myClass.method_map.update(n, e)
-            }
-          }
-          //println(myClass.class_hierarchy)
-          vmt.update(name, myClass)
-          cBody.foldLeft(Set())((v1,v2) => v1 | v2.eval())
-        }
-      }
-    }
 
   enum assignRHS: //The value
     case Set(args: setExp)
-    case CreateObject(name: String)
+    case NewObject(name: String)
 
 
   enum setExp:
-    //import MySetTheoryDSL.assignExp
-    case AssignField(obj: String, fName: String, rhs: assignRHS)
+    case AssignField(obj: String, fName: String, rhs: setExp)
     case Value(input: BasicType)
     case Variable(name: String)
     case Macro(name: String)
@@ -118,14 +88,13 @@ object MySetTheoryDSL:
     case Difference(op1: setExp, op2: setExp)
     case SymmetricDifference(op1: setExp, op2: setExp)
     case Product(op1: setExp, op2: setExp)
-    case InvokeMethod(obj: String, mName: String)
+    case InvokeMethod(obj: String, mName: String, args: setExp*)
     case GetField(obj: String, fName: String)
 
 
 
 
     def eval(): Set[Any] = { //Walks through the AST and returns a set. Set[Any]
-      //import MySetTheoryDSL.assignExp.*
       this match {
         case Value(v) => Set(v)
         case Variable(name) => scope_map(name,get_scope(name)) //Lookup value
@@ -138,30 +107,22 @@ object MySetTheoryDSL:
           val temp = b.eval() //Evaluate rhs
           current_scope.pop() //Current scope is over - go back to previous scope
           temp //Return the evaluated value
-        //case Assign(Variable(name),Value(a)) => Set(a)
         case Assign(name, assignRHS.Set(set)) =>
+          //println(current_scope)
           scope_map.update((name,current_scope.headOption),set.eval())
           Set()
-        case Assign(name, assignRHS.CreateObject(oName)) =>
+        case Assign(name, assignRHS.NewObject(oName)) =>
           object_binding.update((name,current_scope.headOption),vmt(oName))
           Set()
-        case AssignField(obj, fName, v) =>
-          vmt(obj).field_map(fName) = v
+        case AssignField(obj, fName, rhs) =>
+          vmt(obj).field_map(fName) = rhs
           Set()
-        case GetField(obj, fName) => //Need to go up through stack
-          for (parent <- object_binding(obj,current_scope.headOption).class_hierarchy) { //Check current class, then parent, then grandparent.. etc.
-            vmt(parent).field_map get fName match {
-              case Some(v) => return vmt(parent).field_map(fName) match { //The Field was found, evaluate it
-                case assignRHS.Set(s) => s.eval()
-                case assignRHS.CreateObject(name) => Set()
-              }
-              case None => //Not found in this class, go up one level and try again
-            }
+        case GetField(obj, fName) =>
+          object_binding(obj,current_scope.headOption).field_map.get(fName) match {
+            case Some(set) => return set.eval()
+            case None =>
           }
-          throw new RuntimeException("The field was not found")
-
-
-
+          vmt(object_binding(obj,current_scope.headOption).parent.get).field_map(fName).eval()
 
         case Insert(to_insert*) => to_insert.foldLeft(Set())((v1,v2) => v1 | v2.eval())
         case NestedInsert(to_insert*) => to_insert.foldLeft(Set())((v1,v2) => v1 + v2.eval())
@@ -178,14 +139,14 @@ object MySetTheoryDSL:
         case Product(op1, op2) => //The two foldLeft()'s essentially act as a double for loop, so we can combine every element pairwise.
           op1.eval().foldLeft(Set())((left_op1, left_op2) => left_op1 | op2.eval().foldLeft(Set())((right_op1, right_op2) => right_op1 | Set(Set(left_op2) | Set(right_op2))))
 
-        case InvokeMethod(obj,mName) => {
-          for (parent <- object_binding(obj,current_scope.headOption).class_hierarchy) { //Check current class, then parent, then grandparent.. etc.
-            vmt(parent).method_map get mName match {
-              case Some(v) => return v.foldLeft(Set())((v1,v2) => v1 | v2.eval()) //The method was found, evaluate it
-              case None => //Not found in this class, go up one level and try again
+        case InvokeMethod(obj,mName, f_args*) => {
+          val cur_obj = object_binding(obj,current_scope.headOption)
+          if (cur_obj.method_map.contains(mName))
+            for (i <- cur_obj.method_map(mName).args.indices) {
+              Scope(obj,Assign(cur_obj.method_map(mName).args(i),assignRHS.Set(f_args(i))))
             }
-          }
-          throw new RuntimeException("The method was not found") //There wasn't a method with the name you tried to call
+            return Scope(obj,Insert(cur_obj.method_map(mName).body*)).eval()
+          InvokeMethod(cur_obj.parent.get,mName,f_args*).eval()
         }
       }
     }

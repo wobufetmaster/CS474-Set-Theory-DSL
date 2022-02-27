@@ -13,6 +13,24 @@ import MySetTheoryDSL.*
 import setExp.*
 ```
 in your scala program in order to use the set theory DSL provided here.
+##New in HW2: Class support!
+Classes can be created using the following function: 
+```scala
+ClassDef(name: String, parent: Extends, constructor: Constructor, args: classBodyExp*)
+```
+Note that a **classBodyExp** is defined as: 
+```scala
+enum classBodyExp:
+    case Field(name: String)
+    case Method(name: String,args: argExp.Args, body: setExp*)
+    case ClassDef(name: String, parent: Extends, constructor: Constructor, args: classBodyExp*)
+```
+A simple example would be: 
+```scala
+ClassDef("dog",Extends(None),Constructor(),Method("eat",Args(),Insert(Value("dog food"))))
+```
+
+
 
 ##Basic Syntax:
 All expressions need to be evaluated by using the **eval()** method, except for **Check**, which does not require it.
