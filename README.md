@@ -3,14 +3,19 @@
 Written by Sean Stiely on
 2/11/2022 for CS 474
 ##Building and Install:
-You can install this program from [GitHub](https://github.com/wobufetmaster/CS474HW1). 
+You can install this program from [GitHub](https://github.com/wobufetmaster/CS474HW1). (Use the HW2 branch)
 This program is buildable using the sbt. It can be run and built using the commands **sbt clean compile test** and **sbt clean compile run** It is also intelliJ friendly, and can be imported into it 
 easily. 
 Make sure to include these files in your project, and
 you must put the import statements: 
 ```scala
 import MySetTheoryDSL.*
-import setExp.*
+import MySetTheoryDSL.setExp.*
+import MySetTheoryDSL.classExp.*
+import MySetTheoryDSL.classBodyExp.*
+import MySetTheoryDSL.argExp.*
+import MySetTheoryDSL.assignRHS.*
+import MySetTheoryDSL.Fields.*
 ```
 in your scala program in order to use the set theory DSL provided here.
 ##New in HW2: Class support!
@@ -27,6 +32,7 @@ enum classBodyExp:
     case Method(name: String,args: argExp.Args, body: setExp*)
     case ClassDef(name: String, parent: Extends, constructor: Constructor, args: classBodyExp*)
 ```
+All of these cases return nothing, they only update the mappings
 A simple example would be: 
 ```scala
 ClassDef("dog",Extends(None),Constructor(),Method("eat",Args(),Insert(Value("dog food"))))
@@ -39,6 +45,7 @@ After that, you can use **InvokeMethod()** to invoke a specific method that you 
 ```scala
 InvokeMethod("my_dog","eat").eval()
 ```
+This returns the result of evaluating the method.
 ##Methods with arguments
 You can use Args() in your method definition in order to create methods that accept arguments. Consider a basic example below:
 ```scala
@@ -52,29 +59,33 @@ InvokeMethod("my_dog","eat",Value("peanut butter").eval())
 ```
 Which should evaluate to: 
 ```scala
-assert(Check("my_food",Insert(Value("I like to eat: "),Value("peanut butter"))))
+Insert(Value("I like to eat: "),Value("peanut butter"))
 ```
 An unlimited number of arguments are supported to methods, and they can be any set expression. 
 
 ##Fields
 Fields can be written to using **AssignField()**, and evaluated with **GetField()**
-
+Unlike a variable, a Field can only be a setExp, it cannot be an object like a variable can. Implementing fields as objects caused too much
+headache, and it would have severely bloated the codebase.
 ```scala
 AssignField(obj: Fields, fName: String, rhs: setExp)
 ```
 Assigns the value of **rhs** to the field **fName** in object **obj**.
 
+Fields is defined as
+```scala
+enum Fields:
+  case This() 
+  case Object(name: String) 
+```
+
 ```scala
 GetField(obj, fName)
 ```
-Gets the field **fName** in object **obj**.
+Returns the value of the field **fName** in object **obj**.
 
-Fields is defined as 
-```scala
-enum Fields: 
-  case This()
-  case Object(name: String)
-```
+
+
 **This()** assigns to the current object, and **Object()** specifies which object you want to acess the field of.
 An example: 
 ```scala
@@ -111,7 +122,40 @@ ClassDef("outer",Extends(None),Constructor(),
       ClassDef("nested_class",Extends(None),Constructor(),Method("hello",Args(),Value("hello from the inner class!"))),
       Method("say_hello",Args(),Assign("inner",NewObject("nested_class")),InvokeMethod("inner","hello"))).eval()
 ```
+##How it's implemented
 
+We have two main maps that are used to implement the class functionality:
+```scala
+private val vmt: collection.mutable.Map[String, abstractClass] = collection.mutable.Map() //Virtual method table
+private val object_binding: collection.mutable.Map[(String,Option[String]), abstractClass] = collection.mutable.Map() //Binds names to instances
+```
+The **vmt** stores the default instances of classes, for every class. The constructor is evaluated when they're created,
+and it sets the default values for fields. 
+
+ **object_binding** stores the mappings from local variables to objects. 
+
+Both of these map to **abstractClass**, which is defined as so: 
+```scala
+class abstractClass(p: Option[String]): //Contains all of the information for a class
+    val method_map: collection.mutable.Map[String, abstractMethod] = collection.mutable.Map() //Methods for this class
+    val field_map: collection.mutable.Map[String, setExp] = collection.mutable.Map() //Fields for this class
+    val parent: Option[String] = p //None if it has no parent, otherwise Some(parent)
+```
+fields can only be setExp's so they simply map to setExp's. Methods require more information, so they're mapped to another class.
+The parent is simply which class we are inheriting from, or None. 
+
+The **method_map** maps the names of method to abstractMethod's which are defined as: 
+```scala
+class abstractMethod(a: Seq[String], b: Seq[setExp]): //Contains all of the information for a method
+    val args: Seq[String] = a //The list of argument names for this function
+    val body: Seq[setExp] = b //The body of the method
+```
+If the argument names are **Names**, and the specific method arguments are **args** then a method is evaluated by calling
+**Assign(Names,args)** for all Names and args, which creates local variables in the function scope, with the values of the method arguments, and
+the names that were defined in the method. 
+
+
+##The old stuff from the last homework
 
 ##Basic Syntax:
 All expressions need to be evaluated by using the **eval()** method, except for **Check**, which does not require it.

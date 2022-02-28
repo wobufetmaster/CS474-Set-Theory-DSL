@@ -21,6 +21,15 @@ class AdvancedTests extends AnyFunSuite {
     assert(Check("my_inner",Value("hello from the inner class!"))) //Should have new value
 
   }
+  test("Advanced method") {
+    ClassDef("myClass",Extends(None),Constructor(),Method("intersection",Args("arg1","arg2"),
+      Intersection(Variable("arg1"),Variable("arg2")))).eval()
+
+    Assign("obj",NewObject("myClass")).eval()
+    Assign("val",Set(InvokeMethod("obj","intersection",Insert(Value(1),Value(3)),Insert(Value(3),Value(5))))).eval()
+
+    assert(Check("val",Insert(Value(3))))
+  }
 
 
 }
