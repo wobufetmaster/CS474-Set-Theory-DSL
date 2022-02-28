@@ -14,6 +14,8 @@ import setExp.*
 ```
 in your scala program in order to use the set theory DSL provided here.
 ##New in HW2: Class support!
+
+##Basic Classes
 Classes can be created using the following function: 
 ```scala
 ClassDef(name: String, parent: Extends, constructor: Constructor, args: classBodyExp*)
@@ -29,7 +31,86 @@ A simple example would be:
 ```scala
 ClassDef("dog",Extends(None),Constructor(),Method("eat",Args(),Insert(Value("dog food"))))
 ```
+To use methods from the class, you must first create an object, and then assign it to a variable. This can be done like so:
+```scala
+Assign("my_dog",NewObject("dog")).eval()
+```
+After that, you can use **InvokeMethod()** to invoke a specific method that you want, like so:
+```scala
+InvokeMethod("my_dog","eat").eval()
+```
+##Methods with arguments
+You can use Args() in your method definition in order to create methods that accept arguments. Consider a basic example below:
+```scala
+ClassDef("dog",Extends(None),Constructor(),Method("eat",Args("food"),Insert(Value("I like to eat: "),Variable("food")))).eval()
+```
+Args contains a list of strings that will be used as the names of the arguments. 
+The arguments to your method are referred to as variables, and you use Variable() to access them.
+It can then be evaluated with the given argument like so: 
+```scala
+InvokeMethod("my_dog","eat",Value("peanut butter").eval())
+```
+Which should evaluate to: 
+```scala
+assert(Check("my_food",Insert(Value("I like to eat: "),Value("peanut butter"))))
+```
+An unlimited number of arguments are supported to methods, and they can be any set expression. 
 
+##Fields
+Fields can be written to using **AssignField()**, and evaluated with **GetField()**
+
+```scala
+AssignField(obj: Fields, fName: String, rhs: setExp)
+```
+Assigns the value of **rhs** to the field **fName** in object **obj**.
+
+```scala
+GetField(obj, fName)
+```
+Gets the field **fName** in object **obj**.
+
+Fields is defined as 
+```scala
+enum Fields: 
+  case This()
+  case Object(name: String)
+```
+**This()** assigns to the current object, and **Object()** specifies which object you want to acess the field of.
+An example: 
+```scala
+ClassDef("dog",Extends(None),Constructor(AssignField(This(),"tail_size",Insert(Value(4)))),Field("tail_size")).eval()
+```
+##Inheritance
+There is support for single inheritance. The extends keyword takes an **Option[String]** as an argument, with None
+representing no inheritance, and Some("val") representing inheriting from the class val.
+Consider the following: 
+```scala
+ClassDef("dog",Extends(None),Constructor(),Method("eat",Args(),Insert(Value("dog food")))).eval()
+ClassDef("beagle",Extends(Some("dog")),Constructor(),Method("eat",Args(),Insert(Value("beagle food")))).eval()
+```
+The method eat is overriden by the child class beagle, so invoking it on an instance of the beagle object will return "beagle food"
+
+```scala
+ClassDef("dog",Extends(None),Constructor(),Method("eat",Args(),Insert(Value("dog food")))).eval()
+ClassDef("beagle",Extends(Some("dog")),Constructor()).eval() //Note that there is no eat function anymore
+```
+In this case, since there is no eat method on the beagle class, invoking it on an instance of the beagle class will return "dog food" 
+
+The same goes for methods: 
+```scala
+ClassDef("dog",Extends(None), Constructor(
+  AssignField(This(),"name",Insert(Value("doggy")))),Field("name")).eval()
+ClassDef("beagle",Extends(Some("dog")),Constructor()).eval() //No constructor or field, both are inherited from parent
+```
+In this case, accessing the field name will return the value "doggy", because that is the value that is assigned to it in the constructor of the parent class.
+
+##Nested Classes
+Classes can be nested inside of each other. See the following example:  
+```scala
+ClassDef("outer",Extends(None),Constructor(),
+      ClassDef("nested_class",Extends(None),Constructor(),Method("hello",Args(),Value("hello from the inner class!"))),
+      Method("say_hello",Args(),Assign("inner",NewObject("nested_class")),InvokeMethod("inner","hello"))).eval()
+```
 
 
 ##Basic Syntax:

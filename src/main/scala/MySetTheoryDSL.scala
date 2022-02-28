@@ -39,17 +39,16 @@ object MySetTheoryDSL:
 
     def eval(): Unit = {
       this match {
-        case ClassDef(name,Extends(parent),Constructor(cBody*),args*) => {
+        case ClassDef(name,Extends(parent),Constructor(cBody*),args*) => 
           val myClass = new abstractClass(parent)
           vmt.update(name, myClass)
           current_scope.push(name)
           for (arg <- args) {
             arg.eval()
           }
-
           cBody.foldLeft(Set())((v1,v2) => v1 | v2.eval()) //Evaluate the constructor
           current_scope.pop()
-        }
+        
         case Field(name) => vmt(current_scope.head).field_map.update(name,Insert())
         case Method(name,argExp.Args(args*),body*) =>
           val myMethod = new abstractMethod(args,body)
@@ -71,9 +70,13 @@ object MySetTheoryDSL:
     case Set(args: setExp)
     case NewObject(name: String)
 
-
+  enum Fields: 
+    case This()
+    case Object(name: String)
+  
+  
   enum setExp:
-    case AssignField(obj: String, fName: String, rhs: setExp)
+    case AssignField(obj: Fields, fName: String, rhs: setExp)
     case Value(input: BasicType)
     case Variable(name: String)
     case Macro(name: String)
@@ -114,9 +117,12 @@ object MySetTheoryDSL:
         case Assign(name, assignRHS.NewObject(oName)) =>
           object_binding.update((name,current_scope.headOption),vmt(oName))
           Set()
-        case AssignField(obj, fName, rhs) =>
-          vmt(obj).field_map(fName) = rhs
+        case AssignField(Fields.This(), fName, rhs) => //Constructor updates the vmt
+          vmt(current_scope.headOption.get).field_map(fName) = rhs
           Set()
+        case AssignField(Fields.Object(obj), fName, rhs) => //Update the object binding, this is a local change
+          object_binding(obj,current_scope.headOption).field_map(fName) = rhs
+          Set()  
         case GetField(obj, fName) =>
           object_binding(obj,current_scope.headOption).field_map.get(fName) match {
             case Some(set) => return set.eval()
@@ -139,15 +145,17 @@ object MySetTheoryDSL:
         case Product(op1, op2) => //The two foldLeft()'s essentially act as a double for loop, so we can combine every element pairwise.
           op1.eval().foldLeft(Set())((left_op1, left_op2) => left_op1 | op2.eval().foldLeft(Set())((right_op1, right_op2) => right_op1 | Set(Set(left_op2) | Set(right_op2))))
 
-        case InvokeMethod(obj,mName, f_args*) => {
+        case InvokeMethod(obj,mName, f_args*) => 
           val cur_obj = object_binding(obj,current_scope.headOption)
           if (cur_obj.method_map.contains(mName))
-            for (i <- cur_obj.method_map(mName).args.indices) {
-              Scope(obj,Assign(cur_obj.method_map(mName).args(i),assignRHS.Set(f_args(i))))
-            }
-            return Scope(obj,Insert(cur_obj.method_map(mName).body*)).eval()
-          InvokeMethod(cur_obj.parent.get,mName,f_args*).eval()
-        }
+            for (i <- cur_obj.method_map(mName).args.indices) 
+              Scope(obj,Assign(cur_obj.method_map(mName).args(i),assignRHS.Set(f_args(i)))).eval() //Setting up arguments
+            return Scope(obj,Insert(cur_obj.method_map(mName).body*)).eval() //Evaluating method
+          val p_name = cur_obj.parent.get  
+          val parent_class = vmt(p_name)
+          for (i <- parent_class.method_map(mName).args.indices) 
+            Scope(p_name,Assign(parent_class.method_map(mName).args(i),assignRHS.Set(f_args(i)))).eval()
+          Scope(p_name,Insert(parent_class.method_map(mName).body*)).eval()
       }
     }
 
