@@ -8,11 +8,13 @@ import scala.collection.mutable
 object MySetTheoryDSL:
   type BasicType = Any
 
-  class abstractClass(p: Option[String], a: Boolean): //Contains all of the information for a class
+  class abstractClass(p: Option[String], Abstract: Boolean = false, Interface: Boolean = false): //Contains all of the information for a class
     val method_map: collection.mutable.Map[String, abstractMethod] = collection.mutable.Map() //Methods for this class
     val field_map: collection.mutable.Map[String, setExp] = collection.mutable.Map() //Fields for this class
     val parent: Option[String] = p //None if it has no parent, otherwise Some(parent)
-    val isAbstract: Boolean = a;
+    val inheritanceStack: mutable.Stack[String] = new mutable.Stack[String]()
+    val isAbstract: Boolean = Abstract;
+    val isInterface: Boolean = Interface;
 
   class abstractMethod(a: Seq[String], b: Seq[setExp], c: Boolean): //Contains all of the information for a method
     val args: Seq[String] = a //The list of argument names for this function
@@ -44,7 +46,18 @@ object MySetTheoryDSL:
     def eval(): Unit =
       this match
         case ClassDef(name,Extends(parent),Constructor(cBody*),args*) =>
-          val myClass = new abstractClass(parent,false)
+          val myClass = new abstractClass(parent)
+          vmt.update(name, myClass)
+          current_scope.push(name) //Enter the scope of the constructor
+          for (arg <- args)
+            arg.eval()
+          cBody.foldLeft(Set())((v1,v2) => v1 | v2.eval()) //Evaluate the constructor
+          current_scope.pop()
+
+        case ClassDef(name,Implements(parent),Constructor(cBody*),args*) =>
+          val myClass = new abstractClass(Some(parent))
+          myClass.inheritanceStack.pushAll(vmt(parent).inheritanceStack)
+          print(myClass.inheritanceStack)
           vmt.update(name, myClass)
           current_scope.push(name) //Enter the scope of the constructor
           for (arg <- args)
@@ -53,7 +66,7 @@ object MySetTheoryDSL:
           current_scope.pop()
 
         case AbstractClassDef(name,Extends(parent),Constructor(cBody*),args*) =>
-          val myClass = new abstractClass(parent,true)
+          val myClass = new abstractClass(parent, Abstract = true)
           vmt.update(name, myClass)
           current_scope.push(name) //Enter the scope of the constructor
           for (arg <- args)

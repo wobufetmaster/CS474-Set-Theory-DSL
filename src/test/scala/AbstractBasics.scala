@@ -12,12 +12,12 @@ class AbstractBasics extends AnyFunSuite {
   
   test("Instantiate Abstract class") {
     AbstractClassDef("dog",Extends(None),Constructor(),Method("eat",Args())).eval()
-    
+
     assertThrows[RuntimeException] { //Attempting to instantiate abstract class
       Assign("my_dog",NewObject("dog")).eval()
     }
     assertThrows[RuntimeException] { //Abstract class with no abstract methods
-      AbstractClassDef("monkey", Extends(None), Constructor(), Method("eat", Args(), Insert())).eval()
+      AbstractClassDef("monkey", Extends(None), Constructor(), Method("eat", Args(), Insert(Value("Banana")))).eval()
     }
   }
   
