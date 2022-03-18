@@ -1,4 +1,5 @@
-import MySetTheoryDSL.classExp.{Constructor, Extends}
+import MySetTheoryDSL.inheritanceExp.{Implements, Extends}
+import MySetTheoryDSL.classExp.Constructor
 import MySetTheoryDSL.setExp.*
 
 import scala.collection.mutable
@@ -7,14 +8,16 @@ import scala.collection.mutable
 object MySetTheoryDSL:
   type BasicType = Any
 
-  class abstractClass(p: Option[String]): //Contains all of the information for a class
+  class abstractClass(p: Option[String], a: Boolean): //Contains all of the information for a class
     val method_map: collection.mutable.Map[String, abstractMethod] = collection.mutable.Map() //Methods for this class
     val field_map: collection.mutable.Map[String, setExp] = collection.mutable.Map() //Fields for this class
     val parent: Option[String] = p //None if it has no parent, otherwise Some(parent)
+    val isAbstract: Boolean = a;
 
-  class abstractMethod(a: Seq[String], b: Seq[setExp]): //Contains all of the information for a method
+  class abstractMethod(a: Seq[String], b: Seq[setExp], c: Boolean): //Contains all of the information for a method
     val args: Seq[String] = a //The list of argument names for this function
     val body: Seq[setExp] = b //The body of the method
+    val isAbstract: Boolean = c
 
   private val macro_map: collection.mutable.Map[String, setExp] = collection.mutable.Map()
   private val scope_map: collection.mutable.Map[(String,Option[String]), Set[Any]] = collection.mutable.Map()
@@ -33,21 +36,39 @@ object MySetTheoryDSL:
 
   enum classBodyExp: //The body of a class declaration can be any combination of fields, methods, and nested classes
     case Field(name: String)
-    case Method(name: String,args: argExp.Args, body: setExp*)
-    case ClassDef(name: String, parent: Extends, constructor: Constructor, args: classBodyExp*)
+    case Interface(name: String, parent: inheritanceExp, args: classBodyExp*)
+    case Method(name: String, args: argExp.Args, body: setExp*)
+    case ClassDef(name: String, parent: inheritanceExp, constructor: Constructor, args: classBodyExp*)
+    case AbstractClassDef(name: String, parent: inheritanceExp, constructor: Constructor, args: classBodyExp*)
 
     def eval(): Unit =
       this match
         case ClassDef(name,Extends(parent),Constructor(cBody*),args*) =>
-          val myClass = new abstractClass(parent)
+          val myClass = new abstractClass(parent,false)
           vmt.update(name, myClass)
           current_scope.push(name) //Enter the scope of the constructor
           for (arg <- args)
             arg.eval()
           cBody.foldLeft(Set())((v1,v2) => v1 | v2.eval()) //Evaluate the constructor
           current_scope.pop()
+
+        case AbstractClassDef(name,Extends(parent),Constructor(cBody*),args*) =>
+          val myClass = new abstractClass(parent,true)
+          vmt.update(name, myClass)
+          current_scope.push(name) //Enter the scope of the constructor
+          for (arg <- args)
+            arg.eval()
+          cBody.foldLeft(Set())((v1,v2) => v1 | v2.eval()) //Evaluate the constructor
+          current_scope.pop()
+          for (method <- vmt(name).method_map.values)
+            if (method.isAbstract)
+              return
+          throw new RuntimeException
+
+        case Interface(name, Implements(parent),args*) =>
         case Field(name) => vmt(current_scope.head).field_map.update(name,Insert()) //Update the VMT with the field
-        case Method(name,argExp.Args(args*),body*) => vmt(current_scope.head).method_map.update(name, new abstractMethod(args,body)) //update vmt with method
+        case Method(name,argExp.Args(args*)) => vmt(current_scope.head).method_map.update(name, new abstractMethod(args,Seq.empty,true))
+        case Method(name,argExp.Args(args*),body*) => vmt(current_scope.head).method_map.update(name, new abstractMethod(args,body,false)) //update vmt with method
 
 
 
@@ -56,9 +77,14 @@ object MySetTheoryDSL:
     case Object(name: String)
     case Set(set: setExp)
 
+
+  enum inheritanceExp:
+    case Implements(name: String)
+    case Extends(name: Option[String]) //Only one
+
   enum classExp:
     case Constructor(body: setExp*) //Only one
-    case Extends(name: Option[String]) //Only one
+
 
 
   enum assignRHS: //The value
@@ -109,6 +135,8 @@ object MySetTheoryDSL:
           scope_map.update((name,current_scope.headOption),set.eval()) //Assign a variable to a set
           Set()
         case Assign(name, assignRHS.NewObject(oName)) => //Assign a variable to a new instance of an object
+          if (vmt(oName).isAbstract)
+            throw new RuntimeException
           object_binding.update((name,current_scope.headOption),vmt(oName))
           Set()
         case AssignField(Fields.This(), fName, rhs) => //Constructor updates the vmt

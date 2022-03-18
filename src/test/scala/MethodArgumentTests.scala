@@ -6,6 +6,7 @@ import MySetTheoryDSL.classBodyExp.*
 import MySetTheoryDSL.classExp.*
 import MySetTheoryDSL.setExp.*
 import org.scalatest.funsuite.AnyFunSuite
+import MySetTheoryDSL.inheritanceExp.*
 
 class MethodArgumentTests extends AnyFunSuite {
   test("1 Argument Test") {

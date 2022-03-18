@@ -1,21 +1,24 @@
 import MySetTheoryDSL.*
-import MySetTheoryDSL.setExp.*
-import MySetTheoryDSL.classExp.*
-import MySetTheoryDSL.classBodyExp.*
+import MySetTheoryDSL.Fields.*
 import MySetTheoryDSL.argExp.*
 import MySetTheoryDSL.assignRHS.*
-import MySetTheoryDSL.Fields.*
-import org.scalatest.funsuite.AnyFunSuite
+import MySetTheoryDSL.classBodyExp.*
+import MySetTheoryDSL.classExp.*
+import MySetTheoryDSL.setExp.*
 import MySetTheoryDSL.inheritanceExp.*
+import org.scalatest.funsuite.AnyFunSuite
 
-class BasicTests extends AnyFunSuite {
+class AbstractBasics extends AnyFunSuite {
   
-  test("Basic Methods Test") {
-    ClassDef("dog",Extends(None),Constructor(),Method("eat",Args(),Insert(Value("dog food")))).eval()
-
-    Assign("my_dog",NewObject("dog")).eval()
-    Assign("my_food",Set(InvokeMethod("my_dog","eat"))).eval()
-    assert(Check("my_food",Insert(Value("dog food"))))
+  test("Instantiate Abstract class") {
+    AbstractClassDef("dog",Extends(None),Constructor(),Method("eat",Args())).eval()
+    
+    assertThrows[RuntimeException] { //Attempting to instantiate abstract class
+      Assign("my_dog",NewObject("dog")).eval()
+    }
+    assertThrows[RuntimeException] { //Abstract class with no abstract methods
+      AbstractClassDef("monkey", Extends(None), Constructor(), Method("eat", Args(), Insert())).eval()
+    }
   }
   
   test("Basic Fields and Constructors Test") {

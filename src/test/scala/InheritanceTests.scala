@@ -6,6 +6,7 @@ import MySetTheoryDSL.classBodyExp.*
 import MySetTheoryDSL.classExp.*
 import MySetTheoryDSL.setExp.*
 import org.scalatest.funsuite.AnyFunSuite
+import MySetTheoryDSL.inheritanceExp.*
 
 class InheritanceTests extends AnyFunSuite {
   test("Overwritten Method Test") {

@@ -1,7 +1,7 @@
-# CS474HW2
-##Set theory DSL with class constructs for CS 474
+# CS474HW3
+##Set theory DSL with abstract classes for CS 474
 Written by Sean Stiely on
-2/11/2022 for CS 474
+3/17/2022 for CS 474
 ##Building and Install:
 You can install this program from [GitHub](https://github.com/wobufetmaster/CS474HW1). (Use the HW2 branch)
 This program is buildable using the sbt. It can be run and built using the commands **sbt clean compile test** and **sbt clean compile run** It is also intelliJ friendly, and can be imported into it 
