@@ -13,8 +13,8 @@ object MySetTheoryDSL:
     val field_map: collection.mutable.Map[String, setExp] = collection.mutable.Map() //Fields for this class
     val parent: Option[String] = p //None if it has no parent, otherwise Some(parent)
     val inheritanceStack: mutable.Stack[String] = new mutable.Stack[String]()
-    val isAbstract: Boolean = Abstract;
-    val isInterface: Boolean = Interface;
+    val isAbstract: Boolean = Abstract
+    val isInterface: Boolean = Interface
 
   class abstractMethod(a: Seq[String], b: Seq[setExp], c: Boolean): //Contains all of the information for a method
     val args: Seq[String] = a //The list of argument names for this function
@@ -38,15 +38,16 @@ object MySetTheoryDSL:
 
   enum classBodyExp: //The body of a class declaration can be any combination of fields, methods, and nested classes
     case Field(name: String)
-    case Interface(name: String, parent: inheritanceExp, args: classBodyExp*)
+    case Interface(name: String, parent: Extends, args: classBodyExp*)
     case Method(name: String, args: argExp.Args, body: setExp*)
     case ClassDef(name: String, parent: inheritanceExp, constructor: Constructor, args: classBodyExp*)
-    case AbstractClassDef(name: String, parent: inheritanceExp, constructor: Constructor, args: classBodyExp*)
+    case AbstractClassDef(name: String, parent: Extends, constructor: Constructor, args: classBodyExp*)
 
     def eval(): Unit =
       this match
         case ClassDef(name,Extends(parent),Constructor(cBody*),args*) =>
           val myClass = new abstractClass(parent)
+          myClass.inheritanceStack.push(name)
           vmt.update(name, myClass)
           current_scope.push(name) //Enter the scope of the constructor
           for (arg <- args)
@@ -56,8 +57,11 @@ object MySetTheoryDSL:
 
         case ClassDef(name,Implements(parent),Constructor(cBody*),args*) =>
           val myClass = new abstractClass(Some(parent))
-          myClass.inheritanceStack.pushAll(vmt(parent).inheritanceStack)
-          print(myClass.inheritanceStack)
+
+          myClass.inheritanceStack.push(name)
+          myClass.inheritanceStack.addAll(vmt(parent).inheritanceStack)
+          //print(myClass.inheritanceStack)
+          print(myClass.inheritanceStack.distinct)
           vmt.update(name, myClass)
           current_scope.push(name) //Enter the scope of the constructor
           for (arg <- args)
@@ -65,7 +69,7 @@ object MySetTheoryDSL:
           cBody.foldLeft(Set())((v1,v2) => v1 | v2.eval()) //Evaluate the constructor
           current_scope.pop()
 
-        case AbstractClassDef(name,Extends(parent),Constructor(cBody*),args*) =>
+        case AbstractClassDef(name, Extends(parent),Constructor(cBody*),args*) =>
           val myClass = new abstractClass(parent, Abstract = true)
           vmt.update(name, myClass)
           current_scope.push(name) //Enter the scope of the constructor
@@ -78,12 +82,20 @@ object MySetTheoryDSL:
               return
           throw new RuntimeException
 
-        case Interface(name, Implements(parent),args*) =>
+        case Interface(name, Extends(parent),args*) =>
+          val myClass = new abstractClass(parent, Interface = true)
+          vmt.update(name, myClass)
+          myClass.inheritanceStack.push(name)
+          parent match
+            case Some(str) => myClass.inheritanceStack.addAll(vmt(str).inheritanceStack)
+            case None =>
+          current_scope.push(name) //Enter the scope of the constructor
+          for (arg <- args)
+            arg.eval()
+          current_scope.pop()
         case Field(name) => vmt(current_scope.head).field_map.update(name,Insert()) //Update the VMT with the field
         case Method(name,argExp.Args(args*)) => vmt(current_scope.head).method_map.update(name, new abstractMethod(args,Seq.empty,true))
         case Method(name,argExp.Args(args*),body*) => vmt(current_scope.head).method_map.update(name, new abstractMethod(args,body,false)) //update vmt with method
-
-
 
 
   enum fieldExp:
@@ -148,7 +160,7 @@ object MySetTheoryDSL:
           scope_map.update((name,current_scope.headOption),set.eval()) //Assign a variable to a set
           Set()
         case Assign(name, assignRHS.NewObject(oName)) => //Assign a variable to a new instance of an object
-          if (vmt(oName).isAbstract)
+          if (vmt(oName).isAbstract || vmt(oName).isInterface)
             throw new RuntimeException
           object_binding.update((name,current_scope.headOption),vmt(oName))
           Set()
@@ -183,7 +195,7 @@ object MySetTheoryDSL:
           val cur_obj = object_binding(obj,current_scope.headOption)
           if (cur_obj.method_map.contains(mName)) //Method is defined in base class
             for (i <- cur_obj.method_map(mName).args.indices)
-              Scope(obj,Assign(cur_obj.method_map(mName).args(i),assignRHS.Set(f_args(i)))).eval() //Setting up arguments, assigning them in the funciton scope
+              Scope(obj,Assign(cur_obj.method_map(mName).args(i),assignRHS.Set(f_args(i)))).eval() //Setting up arguments, assigning them in the function scope
             return Scope(obj,Insert(cur_obj.method_map(mName).body*)).eval() //Evaluate the function body
           val p_name = cur_obj.parent.get //Parent name
           val parent_class = vmt(p_name)
