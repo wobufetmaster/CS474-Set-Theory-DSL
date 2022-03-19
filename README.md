@@ -18,6 +18,30 @@ import MySetTheoryDSL.assignRHS.*
 import MySetTheoryDSL.Fields.*
 ```
 in your scala program in order to use the set theory DSL provided here.
+
+##New in HW3: Abstract classes and interfaces!
+
+- Can a class/interface inherit from itself?
+No. For one, the way that this program resolves circular inheritance will see this as circular inheritance,
+and secondly, it doesn't make any sense for a class or interface to inherit from itself.
+- Can an interface inherit from an abstract class with all pure methods?
+Yes.
+- Can an interface implement another interface?
+No. An interface can extend another interface, but it cannot implement one. 
+- Can a class implement two or more different interfaces that declare methods with exactly the same signatures?
+Yes. The priority of which methods to use is left to right in the order they are implemented.
+- Can an abstract class inherit from another abstract class and implement interfaces where all interfaces and the abstract class have methods with the same signatures?
+An abstract class can inherit from another abstract class, but cannot implement any interfaces.
+- Can an abstract class implement interfaces?
+No. 
+- Can a class implement two or more interfaces that have methods whose signatures differ only in return types?
+Yes. Again the order will be resolved left to right from the order they appear in implements.
+- Can an abstract class inherit from a concrete class?
+Yes. 
+- Can an abstract class/interface be instantiated as anonymous concrete classes?
+No. There's no support for anonymous classes in this DSL. 
+
+
 ##New in HW2: Class support!
 
 ##Basic Classes
