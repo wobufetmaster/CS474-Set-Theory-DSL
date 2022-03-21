@@ -10,29 +10,35 @@ import org.scalatest.funsuite.AnyFunSuite
 
 class AbstractClassTests extends AnyFunSuite {
   
-  test("Instantiate abstract class fails") {
-    AbstractClassDef("dog",Extends(None),Constructor(),Method("eat",Args())).eval()
+  test("Incorrect abstract classes") {
+
+    AbstractClassDef("monkey",Extends(None),Constructor(),Method("eat",Args())).eval()
 
     assertThrows[RuntimeException] { //Attempting to instantiate abstract class
-      Assign("my_dog",NewObject("dog")).eval()
+      Assign("pet_monkey",NewObject("monkey")).eval()
     }
 
     assertThrows[RuntimeException] { //Abstract class with no abstract methods
-      AbstractClassDef("monkey", Extends(None), Constructor(), Method("eat", Args(), Insert(Value("Banana")))).eval()
+      AbstractClassDef("chimp", Extends(None), Constructor(), Method("eat", Args(), Insert(Value("Banana")))).eval()
     }
+
+    assertThrows[RuntimeException] { //Not overriding abstract method in concrete class
+      ClassDef("bonobo", Extends(Some("monkey")),Constructor()).eval() //Should fail
+    }
+
 
   }
   
-  test("Basic interfaces Test") {
+  test("Basic abstract classes Test") {
 
     AbstractClassDef("animal",Extends(None),Constructor(),Method("eat",Args())).eval()
     ClassDef("dog", Extends(Some("animal")),Constructor()).eval()
 
     Interface("animal",Extends(None)).eval()
-    ClassDef("dog",Extends(Some("animal")),Constructor(),Method("eat",Args())).eval()
-    ClassDef("daisy",Implements("dog"),Constructor(),Method("shid",Args())).eval()
+    ClassDef("dog",Extends(Some("animal")),Constructor(),Method("eat",Args(),Insert(Value("food")))).eval()
+    //ClassDef("daisy",Implements("dog"),Constructor(),Method("shed",Args())).eval()
 
-    Assign("my_dog",NewObject("daisy")).eval()
+    Assign("my_dog",NewObject("dog")).eval()
     //InvokeMethod("my_dog","eat").eval()
 
 

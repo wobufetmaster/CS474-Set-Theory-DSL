@@ -8,10 +8,9 @@ import scala.collection.mutable
 object MySetTheoryDSL:
   type BasicType = Any
 
-  class abstractClass(p: Option[String], Abstract: Boolean = false, Interface: Boolean = false): //Contains all of the information for a class
+  class abstractClass(Abstract: Boolean = false, Interface: Boolean = false): //Contains all of the information for a class
     val method_map: collection.mutable.Map[String, abstractMethod] = collection.mutable.Map() //Methods for this class
     val field_map: collection.mutable.Map[String, setExp] = collection.mutable.Map() //Fields for this class
-    //val parent: Option[String] = p //None if it has no parent, otherwise Some(parent)
     val inheritanceStack: mutable.Stack[String] = new mutable.Stack[String]()
     val isAbstract: Boolean = Abstract
     val isInterface: Boolean = Interface
@@ -48,14 +47,27 @@ object MySetTheoryDSL:
         throw new RuntimeException("Circular Inheritance")
       }
 
+    def implementsAllMethodsCheck(c: abstractClass): Unit =
+      if (c.method_map.values.count(_.isAbstract) != 0)
+        throw new RuntimeException("Abstract method in concrete class")
+      val base_map = c.method_map
+      //print(c.inheritanceStack)
+      for (s <- c.inheritanceStack)
+        for (k <- vmt(s).method_map.keys)
+          if(vmt(s).method_map(k).isAbstract && base_map.get(k).isEmpty)
+            throw new RuntimeException("Abstract method not overriden in concrete class")
+
+
+
     def eval(): Unit =
       this match
-        case ClassDef(name,Extends(parent),Constructor(cBody*),args*) =>
-          val myClass = new abstractClass(parent)
+        case ClassDef(name, parent, Constructor(cBody*), args*) =>
+          val myClass = new abstractClass()
           myClass.inheritanceStack.push(name)
           parent match
-            case Some(a) => myClass.inheritanceStack.addAll(vmt(a).inheritanceStack)
-            case None =>
+            case Extends(Some (a)) => myClass.inheritanceStack.addAll(vmt(a).inheritanceStack)
+            case Implements(p) => myClass.inheritanceStack.addAll(vmt(p).inheritanceStack)
+            case _ =>
 
           vmt.update(name, myClass)
           current_scope.push(name) //Enter the scope of the constructor
@@ -63,24 +75,11 @@ object MySetTheoryDSL:
           cBody.foldLeft(Set())((v1,v2) => v1 | v2.eval()) //Evaluate the constructor
           current_scope.pop()
           circularInheritanceCheck(myClass.inheritanceStack)
-
-        case ClassDef(name,Implements(parent),Constructor(cBody*),args*) =>
-          val myClass = new abstractClass(Some(parent))
-          myClass.inheritanceStack.push(name)
-          myClass.inheritanceStack.addAll(vmt(parent).inheritanceStack)
-
-          //print(myClass.inheritanceStack.distinct)
-          vmt.update(name, myClass)
-          current_scope.push(name) //Enter the scope of the constructor
-          args.map(a => a.eval())
-          cBody.foldLeft(Set())((v1,v2) => v1 | v2.eval()) //Evaluate the constructor
-          current_scope.pop()
-
-          circularInheritanceCheck(myClass.inheritanceStack)
-
+          implementsAllMethodsCheck(myClass)
 
         case AbstractClassDef(name, Extends(parent),Constructor(cBody*),args*) =>
-          val myClass = new abstractClass(parent, Abstract = true)
+          val myClass = new abstractClass(Abstract = true)
+          myClass.inheritanceStack.push(name)
           vmt.update(name, myClass)
           current_scope.push(name) //Enter the scope of the constructor
           args.map(a => a.eval())
@@ -90,7 +89,7 @@ object MySetTheoryDSL:
           vmt(name).method_map.values.find(x => x.isAbstract).get
 
         case Interface(name, Extends(parent),args*) =>
-          val myClass = new abstractClass(parent, Interface = true)
+          val myClass = new abstractClass(Interface = true)
           vmt.update(name, myClass)
           myClass.inheritanceStack.push(name)
           parent match
@@ -100,6 +99,9 @@ object MySetTheoryDSL:
           args.map(a => a.eval())
           current_scope.pop()
           circularInheritanceCheck(myClass.inheritanceStack)
+          if (vmt(name).method_map.values.count(_.isAbstract) != vmt(name).method_map.values.size)
+            throw new RuntimeException("Concrete method in interface")
+
         case Field(name) => vmt(current_scope.head).field_map.update(name,Insert()) //Update the VMT with the field
         case Method(name,argExp.Args(args*)) => vmt(current_scope.head).method_map.update(name, new abstractMethod(args,Seq.empty,true))
         case Method(name,argExp.Args(args*),body*) => vmt(current_scope.head).method_map.update(name, new abstractMethod(args,body,false)) //update vmt with method
@@ -168,7 +170,7 @@ object MySetTheoryDSL:
           Set()
         case Assign(name, assignRHS.NewObject(oName)) => //Assign a variable to a new instance of an object
           if (vmt(oName).isAbstract || vmt(oName).isInterface)
-            throw new RuntimeException
+            throw new RuntimeException("Attempt to instantiate non concrete class")
           object_binding.update((name,current_scope.headOption),vmt(oName))
           Set()
         case AssignField(Fields.This(), fName, rhs) => //Constructor updates the vmt
