@@ -54,7 +54,7 @@ object MySetTheoryDSL:
       //print(c.inheritanceStack)
       for (s <- c.inheritanceStack)
         for (k <- vmt(s).method_map.keys)
-          if(vmt(s).method_map(k).isAbstract && base_map.get(k).isEmpty)
+          if(vmt(s).method_map(k).isAbstract && !base_map.contains(k))
             throw new RuntimeException("Abstract method not overriden in concrete class")
 
 
@@ -66,7 +66,7 @@ object MySetTheoryDSL:
           myClass.inheritanceStack.push(name)
           parent match
             case Extends(Some (a)) => myClass.inheritanceStack.addAll(vmt(a).inheritanceStack)
-            case Implements(p) => myClass.inheritanceStack.addAll(vmt(p).inheritanceStack)
+            case Implements(p*) => p.map(e => myClass.inheritanceStack.addAll(vmt(e).inheritanceStack))
             case _ =>
 
           vmt.update(name, myClass)
@@ -77,13 +77,13 @@ object MySetTheoryDSL:
           circularInheritanceCheck(myClass.inheritanceStack)
           implementsAllMethodsCheck(myClass)
 
-        case AbstractClassDef(name, Extends(parent),Constructor(cBody*),args*) =>
+        case AbstractClassDef(name, Extends(parent), Constructor(cBody*), args*) =>
           val myClass = new abstractClass(Abstract = true)
           myClass.inheritanceStack.push(name)
           vmt.update(name, myClass)
           current_scope.push(name) //Enter the scope of the constructor
           args.map(a => a.eval())
-          cBody.foldLeft(Set())((v1,v2) => v1 | v2.eval()) //Evaluate the constructor
+          cBody.foldLeft(Set())((v1,v2) => v1 | v2.eval()) //Evaluate Constructor
           current_scope.pop()
           circularInheritanceCheck(myClass.inheritanceStack)
           vmt(name).method_map.values.find(x => x.isAbstract).get
@@ -113,7 +113,7 @@ object MySetTheoryDSL:
 
 
   enum inheritanceExp:
-    case Implements(name: String)
+    case Implements(name: String*)
     case Extends(name: Option[String]) //Only one
 
 

@@ -11,7 +11,7 @@ import org.scalatest.funsuite.AnyFunSuite
 class InterfaceTests extends AnyFunSuite {
   
   test("Instantiate interface fails") {
-    AbstractClassDef("dog",Extends(None),Constructor(),Method("eat",Args())).eval()
+    AbstractClassDef("dog",Extends(None), Constructor(), Method("eat",Args())).eval()
 
     assertThrows[RuntimeException] { //Attempting to instantiate abstract class
       Assign("my_dog",NewObject("dog")).eval()
@@ -24,7 +24,7 @@ class InterfaceTests extends AnyFunSuite {
   
   test("Basic interfaces Test") {
 
-    AbstractClassDef("animal",Extends(None),Constructor(),Method("eat",Args())).eval()
+    AbstractClassDef("animal",Extends(None), Constructor() , Method("eat",Args())).eval()
     ClassDef("dog", Extends(Some("animal")),Constructor()).eval()
 
     Interface("animal",Extends(None)).eval()

@@ -1,10 +1,12 @@
+
+import org.scalatest.funsuite.AnyFunSuite
 import MySetTheoryDSL.*
-import MySetTheoryDSL.Fields.*
+import MySetTheoryDSL.setExp.*
+import MySetTheoryDSL.classExp.*
+import MySetTheoryDSL.classBodyExp.*
 import MySetTheoryDSL.argExp.*
 import MySetTheoryDSL.assignRHS.*
-import MySetTheoryDSL.classBodyExp.*
-import MySetTheoryDSL.classExp.*
-import MySetTheoryDSL.setExp.*
+import MySetTheoryDSL.Fields.*
 import org.scalatest.funsuite.AnyFunSuite
 import MySetTheoryDSL.inheritanceExp.*
 
