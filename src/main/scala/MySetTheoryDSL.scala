@@ -99,8 +99,8 @@ object MySetTheoryDSL:
           args.map(a => a.eval())
           current_scope.pop()
           circularInheritanceCheck(myClass.inheritanceStack)
-          if (vmt(name).method_map.values.count(_.isAbstract) != vmt(name).method_map.values.size)
-            throw new RuntimeException("Concrete method in interface")
+          /*if (vmt(name).method_map.values.count(_.isAbstract) != vmt(name).method_map.values.size)
+            throw new RuntimeException("Concrete method in interface")*/
 
         case Field(name) => vmt(current_scope.head).field_map.update(name,Insert()) //Update the VMT with the field
         case Method(name,argExp.Args(args*)) => vmt(current_scope.head).method_map.update(name, new abstractMethod(args,Seq.empty,true))

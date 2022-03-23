@@ -16,6 +16,7 @@ class InterfaceTests extends AnyFunSuite {
     assertThrows[RuntimeException] { //Attempting to instantiate abstract class
       Assign("my_dog",NewObject("dog")).eval()
     }
+    
     assertThrows[RuntimeException] { //Abstract class with no abstract methods
       AbstractClassDef("monkey", Extends(None), Constructor(), Method("eat", Args(), Insert(Value("Banana")))).eval()
     }
@@ -24,8 +25,7 @@ class InterfaceTests extends AnyFunSuite {
   
   test("Basic interfaces Test") {
 
-    AbstractClassDef("animal",Extends(None), Constructor() , Method("eat",Args())).eval()
-    ClassDef("dog", Extends(Some("animal")),Constructor()).eval()
+    
 
     Interface("animal",Extends(None)).eval()
     Interface("dog",Extends(Some("animal"))).eval()
