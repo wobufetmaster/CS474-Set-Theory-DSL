@@ -45,12 +45,20 @@ class AbstractClassesTest extends AnyFunSuite {
     assert(Check("food", Value("meat")))
 
   }
-  test("Advanced abstract classes Test") {
+  test("Abstract classes with fields and constructors Test") {
+    
 
-    //Some shit with fields idk go steal 
+    AbstractClassDef("monkey",Extends(None), Constructor( //Constructors and fields in abstract classes
+      AssignField(This(),"brain_size",Insert(Value("small")))),
+      Field("brain_size"),
+      Method("eat", Args())).eval()
+    ClassDef("orangutan",Extends(Some("monkey")), Constructor(), Method("eat", Args(), Value("banana"))).eval() 
 
+    Assign("my_orangutan",NewObject("orangutan")).eval()
+    Assign("orangutan_brain",Set(GetField("my_orangutan","brain_size"))).eval()
 
-
+    assert(Check("orangutan_brain",Value("small")))
+    
 
   }
 

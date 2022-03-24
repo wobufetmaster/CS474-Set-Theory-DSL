@@ -10,12 +10,14 @@ Make sure to include these files in your project, and
 you must put the import statements: 
 ```scala
 import MySetTheoryDSL.*
-import MySetTheoryDSL.setExp.*
-import MySetTheoryDSL.classExp.*
-import MySetTheoryDSL.classBodyExp.*
+import MySetTheoryDSL.Fields.*
 import MySetTheoryDSL.argExp.*
 import MySetTheoryDSL.assignRHS.*
-import MySetTheoryDSL.Fields.*
+import MySetTheoryDSL.classBodyExp.*
+import MySetTheoryDSL.classExp.*
+import MySetTheoryDSL.inheritanceExp.*
+import MySetTheoryDSL.setExp.*
+import org.scalatest.funsuite.AnyFunSuite
 ```
 in your scala program in order to use the set theory DSL provided here.
 
@@ -44,11 +46,16 @@ AbstractClassDef("monkey", Extends(None), Constructor(), Method("eat", Args())).
 ```
 
 
-
 An abstract class contains a constructor, this is used to initialize the default values for any member variables. 
+```scala
+AbstractClassDef("monkey",Extends(None), Constructor( //Constructors and fields in abstract classes
+      AssignField(This(),"brain_size",Insert(Value("small")))),
+      Field("brain_size"),
+      Method("eat", Args())).eval()
+```
+
 
 An abstract class may extend another abstract class, or a concrete class, but it cannot implement interfaces.
-
 
 
 

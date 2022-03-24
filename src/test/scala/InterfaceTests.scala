@@ -76,6 +76,7 @@ class InterfaceTests extends AnyFunSuite {
   }
 
   test("Long inheritance chains") {
+
     Interface("animal",Extends(None), Method("eat", Args(), Value("food"))).eval()
     Interface("monkey",Extends(Some("animal"))).eval()
     Interface("gorilla",Extends(Some("animal"))).eval()
@@ -84,7 +85,7 @@ class InterfaceTests extends AnyFunSuite {
 
     ClassDef("alpha", Implements("silverback"), Constructor()).eval()
     Assign("my_alpha",NewObject("alpha")).eval()
-    Assign("eat",Set(InvokeMethod("my_alpha","eat"))).eval()
+    Assign("eat",Set(InvokeMethod("my_alpha","eat"))).eval() //Should invoke the method in the animal class
     assert(Check("eat",Value("food")))
 
   }
