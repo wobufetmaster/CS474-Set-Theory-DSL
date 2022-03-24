@@ -15,7 +15,8 @@ class AdvancedTests extends AnyFunSuite {
 
   test("Nested Class Test") {
     ClassDef("outer",Extends(None),Constructor(),
-      ClassDef("nested_class",Extends(None),Constructor(),Method("hello",Args(),Value("hello from the inner class!"))),
+      ClassDef("nested_class",Extends(None),Constructor(),
+        Method("hello",Args(),Value("hello from the inner class!"))),
       Method("say_hello",Args(),Assign("inner",NewObject("nested_class")),InvokeMethod("inner","hello"))).eval()
 
     Assign("my_outer",NewObject("outer")).eval()

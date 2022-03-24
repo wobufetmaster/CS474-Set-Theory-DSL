@@ -18,9 +18,14 @@ class AbstractClassesTest extends AnyFunSuite {
 
     AbstractClassDef("monkey", Extends(None), Constructor(), Method("eat", Args())).eval()
 
-    assertThrows[RuntimeException] { //Attemp to instantiate abstract class
+    assertThrows[RuntimeException] { //Attempt to instantiate abstract class should fail
       Assign("pet_monkey", NewObject("monkey")).eval()
     }
+
+    assertThrows[RuntimeException] { //Concrete class with an abstract method.
+      ClassDef("panda", Extends(None), Constructor(), Method("eat", Args())).eval()
+    }
+
 
   }
   
@@ -38,6 +43,31 @@ class AbstractClassesTest extends AnyFunSuite {
 
     assert(Check("noise",Value("monkey noises")))
     assert(Check("food", Value("meat")))
+
+  }
+  test("Advanced abstract classes Test") {
+
+    //Some shit with fields idk go steal 
+
+
+
+
+  }
+
+  test("Nested abstract classes Test") {
+
+    ClassDef("outer",Extends(None),Constructor(),
+      AbstractClassDef("nested_abstract",Extends(None), Constructor(),
+        Method("abstract",Args()), //An abstract class needs at least one abstract method
+        Method("hello",Args(),Value("hello from the inner abstract class!"))),
+      ClassDef("inner_class", Extends(Some("nested_abstract")), Constructor(),
+      Method("abstract",Args(),Value("abstract"))), //And that method must be overwritten
+      Method("say_hello",Args(),Assign("inner",NewObject("inner_class")),InvokeMethod("inner","hello"))).eval()
+
+    Assign("my_outer",NewObject("outer")).eval()
+    Assign("my_inner",Set(InvokeMethod("my_outer","say_hello"))).eval()
+
+    assert(Check("my_inner",Value("hello from the inner abstract class!")))
 
   }
   

@@ -46,7 +46,7 @@ class QuestionsTests extends AnyFunSuite {
 
     assert(Check("monkey_food",Value("banana")))
 
-    //Yes. If the method is overriden, this is fine. If it isn't, and we're using default methods, the priority on whic to use goes from left to right in the order the interfaces are implemented.
+    //Yes. If the method is overriden, this is fine. If it isn't, and we're using default methods, the priority on which to use goes from left to right in the order the interfaces are implemented.
     //"monkey" appears before animal, so that method is called instead of the animal one.
   }
 
@@ -61,7 +61,7 @@ class QuestionsTests extends AnyFunSuite {
     //- Can an abstract class implement interfaces?
     Interface("monkey", Extends(None), Method("throw",Args())).eval()
     assertTypeError("AbstractClassDef(\"primate\", Implements(\"monkey\"), Constructor(), Method(\"eat\", Args()))")
-    //No. I think it would make more sense to simply implement whichever interfaces you want, rather than extending an abstract class that implements them.
+    //No. I think it would make more sense to simply implement whichever interfaces you want, or have them extend each other, rather than extending an abstract class that implements them.
   }
 
   test("Question 7") {
@@ -69,6 +69,11 @@ class QuestionsTests extends AnyFunSuite {
     Interface("monkey", Extends(None), Method("throw",Args())).eval()
     Interface("animal", Extends(None), Method("throw",Args())).eval()
     ClassDef("chimpanzee", Implements("monkey", "animal"), Constructor(), Method("throw", Args(), Value("bugs"))).eval()
+
+    Assign("pet_chimpanzee",NewObject("chimpanzee")).eval()
+    Assign("throws",Set(InvokeMethod("pet_chimpanzee","throw"))).eval()
+
+    assert(Check("throws",Value("bugs")))
     //Yes. Once again which default method is used depends on which name comes first in Implements(). 
   }
 

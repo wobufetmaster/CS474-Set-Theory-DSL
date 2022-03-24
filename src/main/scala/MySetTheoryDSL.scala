@@ -8,14 +8,14 @@ import scala.collection.mutable
 object MySetTheoryDSL:
   type BasicType = Any
 
-  class abstractClass(Abstract: Boolean = false, Interface: Boolean = false): //Contains all of the information for a class
-    val method_map: collection.mutable.Map[String, abstractMethod] = collection.mutable.Map() //Methods for this class
+  class templateClass(Abstract: Boolean = false, Interface: Boolean = false): //Contains all of the information for a class
+    val method_map: collection.mutable.Map[String, templateMethod] = collection.mutable.Map() //Methods for this class
     val field_map: collection.mutable.Map[String, setExp] = collection.mutable.Map() //Fields for this class
     val inheritanceStack: mutable.Stack[String] = new mutable.Stack[String]()
     val isAbstract: Boolean = Abstract
     val isInterface: Boolean = Interface
 
-  class abstractMethod(a: Seq[String], b: Seq[setExp], c: Boolean): //Contains all of the information for a method
+  class templateMethod(a: Seq[String], b: Seq[setExp], c: Boolean): //Contains all of the information for a method
     val args: Seq[String] = a //The list of argument names for this function
     val body: Seq[setExp] = b //The body of the method
     val isAbstract: Boolean = c
@@ -25,8 +25,8 @@ object MySetTheoryDSL:
   private val current_scope: mutable.Stack[String] = new mutable.Stack[String]()
 
 
-  private val vmt: collection.mutable.Map[String, abstractClass] = collection.mutable.Map() //Virtual method table
-  private val object_binding: collection.mutable.Map[(String,Option[String]), abstractClass] = collection.mutable.Map() //Binds names to instances of objects
+  private val vmt: collection.mutable.Map[String, templateClass] = collection.mutable.Map() //Virtual method table
+  private val object_binding: collection.mutable.Map[(String,Option[String]), templateClass] = collection.mutable.Map() //Binds names to instances of objects
 
 
   def get_scope(name: String): Option[String] = //Walk up through the scope stack and find the first scope where our name is defined.
@@ -47,7 +47,7 @@ object MySetTheoryDSL:
         throw new RuntimeException("Circular Inheritance")
       }
 
-    def implementsAllMethodsCheck(c: abstractClass): Unit =
+    def implementsAllMethodsCheck(c: templateClass): Unit =
       if (c.method_map.values.count(_.isAbstract) != 0)
         throw new RuntimeException("Abstract method in concrete class")
       val base_map = c.method_map
@@ -55,14 +55,14 @@ object MySetTheoryDSL:
       for (s <- c.inheritanceStack)
         for (k <- vmt(s).method_map.keys)
           if(vmt(s).method_map(k).isAbstract && !base_map.contains(k))
-            throw new RuntimeException("Abstract method not overriden in concrete class")
+            throw new RuntimeException("Abstract method not overridden in concrete class")
 
 
 
     def eval(): Unit =
       this match
         case ClassDef(name, parent, Constructor(cBody*), args*) =>
-          val myClass = new abstractClass()
+          val myClass = new templateClass()
           myClass.inheritanceStack.push(name)
           parent match
             case Extends(Some (a)) => myClass.inheritanceStack.addAll(vmt(a).inheritanceStack)
@@ -78,7 +78,7 @@ object MySetTheoryDSL:
           implementsAllMethodsCheck(myClass)
 
         case AbstractClassDef(name, Extends(parent), Constructor(cBody*), args*) =>
-          val myClass = new abstractClass(Abstract = true)
+          val myClass = new templateClass(Abstract = true)
           myClass.inheritanceStack.push(name)
           vmt.update(name, myClass)
           current_scope.push(name) //Enter the scope of the constructor
@@ -89,7 +89,7 @@ object MySetTheoryDSL:
           vmt(name).method_map.values.find(x => x.isAbstract).get
 
         case Interface(name, Extends(parent),args*) =>
-          val myClass = new abstractClass(Interface = true)
+          val myClass = new templateClass(Interface = true)
           vmt.update(name, myClass)
           myClass.inheritanceStack.push(name)
           parent match
@@ -103,8 +103,8 @@ object MySetTheoryDSL:
             throw new RuntimeException("Concrete method in interface")*/
 
         case Field(name) => vmt(current_scope.head).field_map.update(name,Insert()) //Update the VMT with the field
-        case Method(name,argExp.Args(args*)) => vmt(current_scope.head).method_map.update(name, new abstractMethod(args,Seq.empty,true))
-        case Method(name,argExp.Args(args*),body*) => vmt(current_scope.head).method_map.update(name, new abstractMethod(args,body,false)) //update vmt with method
+        case Method(name,argExp.Args(args*)) => vmt(current_scope.head).method_map.update(name, new templateMethod(args,Seq.empty,true))
+        case Method(name,argExp.Args(args*),body*) => vmt(current_scope.head).method_map.update(name, new templateMethod(args,body,false)) //update vmt with method
 
 
   enum fieldExp:
@@ -181,7 +181,7 @@ object MySetTheoryDSL:
           Set()
         case GetField(obj, fName) => //Return the value of a field
           val cur_obj = object_binding(obj,current_scope.headOption)
-          val class_name = cur_obj.inheritanceStack.find(x => vmt(x).field_map contains (fName)).get
+          val class_name = cur_obj.inheritanceStack.find(x => vmt(x).field_map contains fName).get
           vmt(class_name).field_map(fName).eval()
 
         case Insert(to_insert*) => to_insert.foldLeft(Set())((v1,v2) => v1 | v2.eval())
@@ -201,7 +201,7 @@ object MySetTheoryDSL:
 
         case InvokeMethod(obj,mName, f_args*) =>
           val cur_obj = object_binding(obj,current_scope.headOption)
-          val class_name = cur_obj.inheritanceStack.find(x => vmt(x).method_map contains (mName)).get
+          val class_name = cur_obj.inheritanceStack.find(x => vmt(x).method_map contains mName).get
           if (vmt(class_name).method_map(mName).isAbstract) {throw new RuntimeException("Abstract method called")}
           for (i <- vmt(class_name).method_map(mName).args.indices)
             Scope(obj,Assign(vmt(class_name).method_map(mName).args(i),assignRHS.Set(f_args(i)))).eval()

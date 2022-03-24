@@ -21,26 +21,89 @@ in your scala program in order to use the set theory DSL provided here.
 
 ##New in HW3: Abstract classes and interfaces!
 
-- Can a class/interface inherit from itself?
-No. For one, the way that this program resolves circular inheritance will see this as circular inheritance,
-and secondly, it doesn't make any sense for a class or interface to inherit from itself.
-- Can an interface inherit from an abstract class with all pure methods?
-Yes.
-- Can an interface implement another interface?
-No. An interface can extend another interface, but it cannot implement one. 
-- Can a class implement two or more different interfaces that declare methods with exactly the same signatures?
-Yes. The priority of which methods to use is left to right in the order they are implemented.
-- Can an abstract class inherit from another abstract class and implement interfaces where all interfaces and the abstract class have methods with the same signatures?
-An abstract class can inherit from another abstract class, but cannot implement any interfaces.
-- Can an abstract class implement interfaces?
-No. 
-- Can a class implement two or more interfaces that have methods whose signatures differ only in return types?
-Yes. Again the order will be resolved left to right from the order they appear in implements.
-- Can an abstract class inherit from a concrete class?
-Yes. 
-- Can an abstract class/interface be instantiated as anonymous concrete classes?
-No. There's no support for anonymous classes in this DSL. 
+##Foreword
+For this homework, I thought that it was important to maintain backwards compatibility with the previous version of this project. As a result I have included all
+of the old tests, which are unmodified from the last homework, to make sure there is no regression in functionality. There are three new test files: **AbstractClassesTest**, **InterfaceTests**, and **QuestionsTests**. 
+The first two should be fairly self explanatory, they test the functionality of abstract classes and interfaces. The other test file, 
+**QuestionsTests**, contains code examples and explanations for each of the functionality questions in the homework description.
 
+##Abstract methods
+
+An abstract method is defined as a method with no body.
+```scala
+ Method("eat", Args(), Value("meat")) //Concrete method
+Method("eat", Args()) //Abstract method
+```
+
+
+##Abstract classes
+Abstract classes are classes that cannot be instantiated, and contain at least one abstract method. 
+Example: 
+```scala
+AbstractClassDef("monkey", Extends(None), Constructor(), Method("eat", Args())).eval()
+```
+
+
+
+An abstract class contains a constructor, this is used to initialize the default values for any member variables. 
+
+An abstract class may extend another abstract class, or a concrete class, but it cannot implement interfaces.
+
+
+
+
+##Interfaces
+
+Interfaces are similar to abstract classes, with a few key differences. 
+Interfaces have no constructor.  Also, a class can implement multiple interfaces. 
+Default methods can be specified in interfaces by including a body in the method declaration.
+All abstract methods need to be overwritten by the class implementing the interface. 
+```scala
+Interface("monkey",Extends(None), Method("eat",Args()), Method("throw", Args(), Value("rock"))).eval()
+Interface("animal",Extends(None), Method("speak",Args()), Method("drink", Args(), Value("water"))).eval()
+ClassDef("lemur", Implements("monkey" ,"animal"), Constructor() , Method("speak", Args(), Value("bark")), Method("eat", Args(), Value("bugs"))).eval()
+```
+The abstract methods **eat** and **speak** must be overwritten by the lemur class because those methods are abstract. The default methods do not need to be overwritten.
+
+Note that any conflicts in method names are resolved based on the order the interfaces are implemented, from left to right. ex: 
+```scala
+Interface("monkey", Extends(None), Method("eat",Args(),Value("banana"))).eval()
+Interface("animal", Extends(None), Method("eat",Args(), Value("animal food"))).eval()
+ClassDef("orangutan", Implements("monkey","animal"),Constructor()).eval()
+```
+So calling the **eat** method on an **orangutan** will cause the leftmost, **monkey** version of the method to be evaluated and return banana. 
+
+Also note that circular inheritance is not allowed. ex: 
+
+```scala
+ClassDef("chimp", Extends(Some("chimp")), Constructor(), Method("eat", Args(), Insert(Value("Banana")))).eval()
+```
+This is considered circular inheritance, and is not allowed. Similarly, for a chain of interfaces extending each other, circular inheritance is not allowed. 
+
+##How its implemented
+Abstract classes and interfaces are represented using the same data structure that represents concrete classes. The difference is there are two boolean values
+that say whether the class is an interface or an abstract class.
+```scala
+class templateClass(Abstract: Boolean = false, Interface: Boolean = false): //Contains all of the information for a class
+    val method_map: collection.mutable.Map[String, templateMethod] = collection.mutable.Map() //Methods for this class
+    val field_map: collection.mutable.Map[String, setExp] = collection.mutable.Map() //Fields for this class
+    val inheritanceStack: mutable.Stack[String] = new mutable.Stack[String]()
+    val isAbstract: Boolean = Abstract
+    val isInterface: Boolean = Interface
+```
+When attempting to instantiate a class, we simply check whether it is abstract or an interface,
+and throw an error if either is true.
+The chain of inheritance is represented by a stack, with the immediate parent being on top, and grandparents being further along in the stack, and so on. 
+
+Abstract methods are similarly represented the same way a regular method is, with a boolean **isAbstract** distinguishing abstract and concrete methods. 
+When creating a method with no body, the **isAbstract** field is set to true. Then we make sure that concrete classes don't have any abstract methods, and that they don't
+inherit any abstract methods without overriding them. 
+```scala
+class templateMethod(a: Seq[String], b: Seq[setExp], c: Boolean): //Contains all of the information for a method
+    val args: Seq[String] = a //The list of argument names for this function
+    val body: Seq[setExp] = b //The body of the method
+    val isAbstract: Boolean = c
+```
 
 ##New in HW2: Class support!
 
@@ -150,29 +213,32 @@ ClassDef("outer",Extends(None),Constructor(),
 
 We have two main maps that are used to implement the class functionality:
 ```scala
-private val vmt: collection.mutable.Map[String, abstractClass] = collection.mutable.Map() //Virtual method table
-private val object_binding: collection.mutable.Map[(String,Option[String]), abstractClass] = collection.mutable.Map() //Binds names to instances
+private val vmt: collection.mutable.Map[String, templateClass] = collection.mutable.Map() //Virtual method table
+private val object_binding: collection.mutable.Map[(String,Option[String]), templateClass] = collection.mutable.Map() //Binds names to instances
 ```
 The **vmt** stores the default instances of classes, for every class. The constructor is evaluated when they're created,
 and it sets the default values for fields. 
 
  **object_binding** stores the mappings from local variables to objects. 
 
-Both of these map to **abstractClass**, which is defined as so: 
+Both of these map to **templateClass**, which is defined as so: 
 ```scala
-class abstractClass(p: Option[String]): //Contains all of the information for a class
-    val method_map: collection.mutable.Map[String, abstractMethod] = collection.mutable.Map() //Methods for this class
-    val field_map: collection.mutable.Map[String, setExp] = collection.mutable.Map() //Fields for this class
-    val parent: Option[String] = p //None if it has no parent, otherwise Some(parent)
+class templateClass(Abstract: Boolean = false, Interface: Boolean = false): //Contains all of the information for a class
+  val method_map: collection.mutable.Map[String, templateMethod] = collection.mutable.Map() //Methods for this class
+  val field_map: collection.mutable.Map[String, setExp] = collection.mutable.Map() //Fields for this class
+  val inheritanceStack: mutable.Stack[String] = new mutable.Stack[String]()
+  val isAbstract: Boolean = Abstract
+  val isInterface: Boolean = Interface
 ```
 fields can only be setExp's so they simply map to setExp's. Methods require more information, so they're mapped to another class.
 The parent is simply which class we are inheriting from, or None. 
 
-The **method_map** maps the names of method to abstractMethod's which are defined as: 
+The **method_map** maps the names of method to templateMethod's which are defined as: 
 ```scala
-class abstractMethod(a: Seq[String], b: Seq[setExp]): //Contains all of the information for a method
-    val args: Seq[String] = a //The list of argument names for this function
-    val body: Seq[setExp] = b //The body of the method
+class templateMethod(a: Seq[String], b: Seq[setExp], c: Boolean): //Contains all of the information for a method
+  val args: Seq[String] = a //The list of argument names for this function
+  val body: Seq[setExp] = b //The body of the method
+  val isAbstract: Boolean = c
 ```
 If the argument names are **Names**, and the specific method arguments are **args** then a method is evaluated by calling
 **Assign(Names,args)** for all Names and args, which creates local variables in the function scope, with the values of the method arguments, and
