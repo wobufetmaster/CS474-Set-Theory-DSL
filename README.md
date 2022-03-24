@@ -3,7 +3,7 @@
 Written by Sean Stiely on
 3/17/2022 for CS 474
 ##Building and Install:
-You can install this program from [GitHub](https://github.com/wobufetmaster/CS474HW1). (Use the HW2 branch)
+You can install this program from [GitHub](https://github.com/wobufetmaster/CS474HW1). (Use the HW3 branch)
 This program is buildable using the sbt. It can be run and built using the commands **sbt clean compile test** and **sbt clean compile run** It is also intelliJ friendly, and can be imported into it 
 easily. 
 Make sure to include these files in your project, and
