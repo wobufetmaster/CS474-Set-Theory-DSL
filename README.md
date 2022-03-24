@@ -57,8 +57,6 @@ AbstractClassDef("monkey",Extends(None), Constructor( //Constructors and fields 
 
 An abstract class may extend another abstract class, or a concrete class, but it cannot implement interfaces.
 
-
-
 ##Interfaces
 
 Interfaces are similar to abstract classes, with a few key differences. 
@@ -87,6 +85,16 @@ ClassDef("chimp", Extends(Some("chimp")), Constructor(), Method("eat", Args(), I
 ```
 This is considered circular inheritance, and is not allowed. Similarly, for a chain of interfaces extending each other, circular inheritance is not allowed. 
 
+```scala
+Interface("A",Extends(None)).eval() 
+    Interface("B",Extends(Some("A"))).eval()
+    Interface("C",Extends(Some("B"))).eval()
+    assertThrows[RuntimeException] { //Circular composition
+      ClassDef("myClass",Implements("B","C"), Constructor()).eval()
+    }
+```
+
+
 ##How its implemented
 Abstract classes and interfaces are represented using the same data structure that represents concrete classes. The difference is there are two boolean values
 that say whether the class is an interface or an abstract class.
@@ -105,6 +113,7 @@ The chain of inheritance is represented by a stack, with the immediate parent be
 Abstract methods are similarly represented the same way a regular method is, with a boolean **isAbstract** distinguishing abstract and concrete methods. 
 When creating a method with no body, the **isAbstract** field is set to true. Then we make sure that concrete classes don't have any abstract methods, and that they don't
 inherit any abstract methods without overriding them. 
+
 ```scala
 class templateMethod(a: Seq[String], b: Seq[setExp], c: Boolean): //Contains all of the information for a method
     val args: Seq[String] = a //The list of argument names for this function
