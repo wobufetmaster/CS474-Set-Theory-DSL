@@ -31,7 +31,7 @@ The first two should be fairly self explanatory, they test the functionality of 
 
 ##Abstract methods
 
-An abstract method is defined as a method with no body.
+An abstract method is defined as a method with no body, only a name and arguments.
 ```scala
  Method("eat", Args(), Value("meat")) //Concrete method
 Method("eat", Args()) //Abstract method
@@ -46,7 +46,7 @@ AbstractClassDef("monkey", Extends(None), Constructor(), Method("eat", Args())).
 ```
 
 
-An abstract class contains a constructor, this is used to initialize the default values for any member variables. 
+An abstract class contains a constructor, this is used to initialize the default values for any fields. 
 ```scala
 AbstractClassDef("monkey",Extends(None), Constructor( //Constructors and fields in abstract classes
       AssignField(This(),"brain_size",Insert(Value("small")))),
