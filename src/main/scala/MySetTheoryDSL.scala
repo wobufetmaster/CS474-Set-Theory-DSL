@@ -121,6 +121,16 @@ object MySetTheoryDSL:
   enum classExp:
     case Constructor(body: setExp*) //Only one
 
+  enum bExp:
+    case CheckIf(set_name: String, set_val: setExp)
+    //case Bool()
+
+
+    def eval(): Boolean =
+      this match
+        case CheckIf(set_name: String, set_val: setExp) => Check(set_name, set_val, current_scope.headOption)
+
+
 
 
   enum assignRHS: //The value
@@ -138,7 +148,7 @@ object MySetTheoryDSL:
     case Variable(name: String)
     case Macro(name: String)
     case CreateMacro(name: String, op2: setExp)
-    case Scope(name: String, op2:setExp)
+    case Scope(name: String, op2: setExp)
     case Assign(name: String, op2: assignRHS)
     case Insert(op: setExp*)
     case NestedInsert(op: setExp*)
@@ -150,6 +160,12 @@ object MySetTheoryDSL:
     case Product(op1: setExp, op2: setExp)
     case InvokeMethod(obj: String, mName: String, args: setExp*)
     case GetField(obj: String, fName: String)
+    //case IF(cond: Boolean, thenClause: setExp, elseClause: setExp)
+    case IF(cond: bExp, thenClause: setExp, elseClause: setExp)
+    case CatchException(name: String, body: setExp*)
+    case ThrowException()
+    case Catch()
+
 
 
     def eval(): Set[Any] =  //Walks through the AST and returns a set. Set[Any]
@@ -206,9 +222,25 @@ object MySetTheoryDSL:
           for (i <- vmt(class_name).method_map(mName).args.indices)
             Scope(obj,Assign(vmt(class_name).method_map(mName).args(i),assignRHS.Set(f_args(i)))).eval()
           Scope(obj,Insert(vmt(class_name).method_map(mName).body*)).eval()
-  
+        case IF(cond, c1, c2) =>
+          cond.eval() match
+            case true => c1.eval()
+            case false => c2.eval()
+  def Condition(condition: => Boolean): Boolean =
+    condition
   def Check(set_name: String, set_val: setExp, set_scope: Option[String] = None): Boolean =   //the Scope can be optionally supplied, or global scope will be used if omitted.
-    set_val.eval().subsetOf(scope_map(set_name,set_scope))
+    set_scope match {
+      case None => set_val.eval().subsetOf(scope_map(set_name,current_scope.headOption))
+      case Some(value) => set_val.eval().subsetOf(scope_map(set_name,set_scope))
+    }
+
+
+/*
+  def IFfunc(condition: => Boolean, thenClause: => Set[Any], elseClause: => Set[Any]): Set[Any] =
+    if condition then thenClause else elseClause
+  end IFfunc
+*/
+
 
   @main def runSetExp(): Unit =
     import setExp.*

@@ -21,6 +21,18 @@ import org.scalatest.funsuite.AnyFunSuite
 ```
 in your scala program in order to use the set theory DSL provided here.
 
+##New in HW4: If statements and error handling!
+
+##Foreword 
+As in the last homework, I thought it was important to maintain backwards compatibility with previous versions of the
+DSL. All of the old tests are included, and still work. 
+
+## If statements
+
+
+
+
+
 ##New in HW3: Abstract classes and interfaces!
 
 ##Foreword
