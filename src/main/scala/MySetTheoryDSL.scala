@@ -1,4 +1,5 @@
-import MySetTheoryDSL.inheritanceExp.{Implements, Extends}
+import MySetTheoryDSL.classBodyExp.ExceptionClassDef
+import MySetTheoryDSL.inheritanceExp.{Extends, Implements}
 import MySetTheoryDSL.classExp.Constructor
 import MySetTheoryDSL.setExp.*
 
@@ -8,12 +9,13 @@ import scala.collection.mutable
 object MySetTheoryDSL:
   type BasicType = Any
 
-  class templateClass(Abstract: Boolean = false, Interface: Boolean = false): //Contains all of the information for a class
+  class templateClass(Abstract: Boolean = false, Interface: Boolean = false, Exception: Boolean = false): //Contains all of the information for a class
     val method_map: collection.mutable.Map[String, templateMethod] = collection.mutable.Map() //Methods for this class
     val field_map: collection.mutable.Map[String, setExp] = collection.mutable.Map() //Fields for this class
     val inheritanceStack: mutable.Stack[String] = new mutable.Stack[String]()
     val isAbstract: Boolean = Abstract
     val isInterface: Boolean = Interface
+    val isException: Boolean = Exception
 
   class templateMethod(a: Seq[String], b: Seq[setExp], c: Boolean): //Contains all of the information for a method
     val args: Seq[String] = a //The list of argument names for this function
@@ -41,6 +43,7 @@ object MySetTheoryDSL:
     case Method(name: String, args: argExp.Args, body: setExp*)
     case ClassDef(name: String, parent: inheritanceExp, constructor: Constructor, args: classBodyExp*)
     case AbstractClassDef(name: String, parent: Extends, constructor: Constructor, args: classBodyExp*)
+    case ExceptionClassDef(name: String, parent: Extends, constructor: Constructor, args: classBodyExp*)
 
     def circularInheritanceCheck(s: mutable.Stack[String]): Unit =
       if (s.distinct.size != s.size) {
@@ -83,6 +86,17 @@ object MySetTheoryDSL:
           vmt.update(name, myClass)
           current_scope.push(name) //Enter the scope of the constructor
           args.map(a => a.eval())
+          cBody.foldLeft(Set())((v1,v2) => v1 | v2.eval()) //Evaluate Constructor
+          current_scope.pop()
+          circularInheritanceCheck(myClass.inheritanceStack)
+          vmt(name).method_map.values.find(x => x.isAbstract).get
+
+        case ExceptionClassDef(name, Extends(parent), Constructor(cBody*), args*) =>
+          val myClass = new templateClass(Exception = true)
+          myClass.inheritanceStack.push(name)
+          vmt.update(name, myClass)
+          current_scope.push(name) //Enter the scope of the constructor
+          args.foreach(a => a.eval())
           cBody.foldLeft(Set())((v1,v2) => v1 | v2.eval()) //Evaluate Constructor
           current_scope.pop()
           circularInheritanceCheck(myClass.inheritanceStack)
@@ -162,9 +176,8 @@ object MySetTheoryDSL:
     case GetField(obj: String, fName: String)
     //case IF(cond: Boolean, thenClause: setExp, elseClause: setExp)
     case IF(cond: bExp, thenClause: setExp, elseClause: setExp)
-    case CatchException(name: String, body: setExp*)
-    case ThrowException()
-    case Catch()
+    case ThrowException(eClassName: String, body: setExp*)
+    case Catch(eClassName: String, body: setExp*)
 
 
 
