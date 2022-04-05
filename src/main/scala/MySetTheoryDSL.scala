@@ -1,3 +1,4 @@
+import MySetTheoryDSL.assignRHS.NewObject
 import MySetTheoryDSL.classBodyExp.ExceptionClassDef
 import MySetTheoryDSL.inheritanceExp.{Extends, Implements}
 import MySetTheoryDSL.classExp.Constructor
@@ -176,8 +177,9 @@ object MySetTheoryDSL:
     case GetField(obj: String, fName: String)
     //case IF(cond: Boolean, thenClause: setExp, elseClause: setExp)
     case IF(cond: bExp, thenClause: setExp, elseClause: setExp)
-    case ThrowException(eClassName: String, body: setExp*)
-    case Catch(eClassName: String, body: setExp*)
+    case ThrowException(obj: assignRHS.NewObject)
+    case Catch(eClassName: Variable, body: setExp*)
+    case CatchException(eClassName: String, body: setExp*)
 
 
 
@@ -239,6 +241,18 @@ object MySetTheoryDSL:
           cond.eval() match
             case true => c1.eval()
             case false => c2.eval()
+        case CatchException(eClass, body*) => 
+          if (!vmt(eClass).isException) {throw new RuntimeException("Trying to throw a non exception class")}
+          for (b <- body) {
+            b match
+              case ThrowException(NewObject(st)) => Set()
+              case Catch(Variable(name),b*) => Set()
+              case _ => b.eval()
+          }
+          Set()
+
+          
+
   def Condition(condition: => Boolean): Boolean =
     condition
   def Check(set_name: String, set_val: setExp, set_scope: Option[String] = None): Boolean =   //the Scope can be optionally supplied, or global scope will be used if omitted.
