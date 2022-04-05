@@ -10,6 +10,9 @@ import scala.collection.mutable
 object MySetTheoryDSL:
   type BasicType = Any
 
+  class templateException(s: String) extends Exception():
+    val class_name: String = s
+
   class templateClass(Abstract: Boolean = false, Interface: Boolean = false, Exception: Boolean = false): //Contains all of the information for a class
     val method_map: collection.mutable.Map[String, templateMethod] = collection.mutable.Map() //Methods for this class
     val field_map: collection.mutable.Map[String, setExp] = collection.mutable.Map() //Fields for this class
@@ -26,6 +29,7 @@ object MySetTheoryDSL:
   private val macro_map: collection.mutable.Map[String, setExp] = collection.mutable.Map()
   private val scope_map: collection.mutable.Map[(String,Option[String]), Set[Any]] = collection.mutable.Map()
   private val current_scope: mutable.Stack[String] = new mutable.Stack[String]()
+  private val exception_handlers: mutable.Stack[String] = new mutable.Stack[String]()
 
 
   private val vmt: collection.mutable.Map[String, templateClass] = collection.mutable.Map() //Virtual method table
@@ -44,7 +48,7 @@ object MySetTheoryDSL:
     case Method(name: String, args: argExp.Args, body: setExp*)
     case ClassDef(name: String, parent: inheritanceExp, constructor: Constructor, args: classBodyExp*)
     case AbstractClassDef(name: String, parent: Extends, constructor: Constructor, args: classBodyExp*)
-    case ExceptionClassDef(name: String, parent: Extends, constructor: Constructor, args: classBodyExp*)
+    case ExceptionClassDef(name: String, parent: inheritanceExp, constructor: Constructor, args: classBodyExp*)
 
     def circularInheritanceCheck(s: mutable.Stack[String]): Unit =
       if (s.distinct.size != s.size) {
@@ -55,7 +59,6 @@ object MySetTheoryDSL:
       if (c.method_map.values.count(_.isAbstract) != 0)
         throw new RuntimeException("Abstract method in concrete class")
       val base_map = c.method_map
-      //print(c.inheritanceStack)
       for (s <- c.inheritanceStack)
         for (k <- vmt(s).method_map.keys)
           if(vmt(s).method_map(k).isAbstract && !base_map.contains(k))
@@ -92,16 +95,21 @@ object MySetTheoryDSL:
           circularInheritanceCheck(myClass.inheritanceStack)
           vmt(name).method_map.values.find(x => x.isAbstract).get
 
-        case ExceptionClassDef(name, Extends(parent), Constructor(cBody*), args*) =>
+        case ExceptionClassDef(name, parent, Constructor(cBody*), args*) =>
           val myClass = new templateClass(Exception = true)
           myClass.inheritanceStack.push(name)
+          parent match
+            case Extends(Some (a)) => myClass.inheritanceStack.addAll(vmt(a).inheritanceStack)
+            case Implements(p*) => p.map(e => myClass.inheritanceStack.addAll(vmt(e).inheritanceStack))
+            case _ =>
+
           vmt.update(name, myClass)
           current_scope.push(name) //Enter the scope of the constructor
           args.foreach(a => a.eval())
-          cBody.foldLeft(Set())((v1,v2) => v1 | v2.eval()) //Evaluate Constructor
+          cBody.foldLeft(Set())((v1,v2) => v1 | v2.eval()) //Evaluate the constructor
           current_scope.pop()
           circularInheritanceCheck(myClass.inheritanceStack)
-          vmt(name).method_map.values.find(x => x.isAbstract).get
+          implementsAllMethodsCheck(myClass)
 
         case Interface(name, Extends(parent),args*) =>
           val myClass = new templateClass(Interface = true)
@@ -114,8 +122,7 @@ object MySetTheoryDSL:
           args.map(a => a.eval())
           current_scope.pop()
           circularInheritanceCheck(myClass.inheritanceStack)
-          /*if (vmt(name).method_map.values.count(_.isAbstract) != vmt(name).method_map.values.size)
-            throw new RuntimeException("Concrete method in interface")*/
+
 
         case Field(name) => vmt(current_scope.head).field_map.update(name,Insert()) //Update the VMT with the field
         case Method(name,argExp.Args(args*)) => vmt(current_scope.head).method_map.update(name, new templateMethod(args,Seq.empty,true))
@@ -184,7 +191,7 @@ object MySetTheoryDSL:
 
 
     def eval(): Set[Any] =  //Walks through the AST and returns a set. Set[Any]
-      this match 
+      this match
         case Value(v) => Set(v)
         case Variable(name) => scope_map(name,get_scope(name)) //Lookup value
         case Macro(a) => macro_map(a).eval() //Lookup macro and execute
@@ -196,7 +203,7 @@ object MySetTheoryDSL:
           val temp = b.eval() //Evaluate rhs
           current_scope.pop() //Current scope is over - go back to previous scope
           temp //Return the evaluated value
-        case Assign(name, assignRHS.Set(set)) => 
+        case Assign(name, assignRHS.Set(set)) =>
           scope_map.update((name,current_scope.headOption),set.eval()) //Assign a variable to a set
           Set()
         case Assign(name, assignRHS.NewObject(oName)) => //Assign a variable to a new instance of an object
@@ -238,18 +245,31 @@ object MySetTheoryDSL:
             Scope(obj,Assign(vmt(class_name).method_map(mName).args(i),assignRHS.Set(f_args(i)))).eval()
           Scope(obj,Insert(vmt(class_name).method_map(mName).body*)).eval()
         case IF(cond, c1, c2) =>
-          cond.eval() match
-            case true => c1.eval()
-            case false => c2.eval()
-        case CatchException(eClass, body*) => 
-          if (!vmt(eClass).isException) {throw new RuntimeException("Trying to throw a non exception class")}
-          for (b <- body) {
-            b match
-              case ThrowException(NewObject(st)) => Set()
-              case Catch(Variable(name),b*) => Set()
-              case _ => b.eval()
+          if (cond.eval()) {
+            c1.eval()
+          } else {
+            c2.eval()
           }
+        case CatchException(eClass, body*) =>
+          if (!vmt(eClass).isException) {throw new RuntimeException("Trying to throw a non exception class")}
+          val catchStmt = body.indexOf(Catch) //Find the index of the catch statement
+          val rest = body.takeRight(catchStmt) //The rest of the code, this needs to get executed after the catch statement.
+          try body.foldLeft(Set())((v1,v2) => v1 | v2.eval()) //Try to evaluate the code as normal
+          catch {
+            case e: templateException =>
+              body(catchStmt) match {
+                case Catch(Variable(name), cBody*) =>
+                  Assign(name, NewObject(e.class_name)).eval()
+                  Insert(cBody*).eval() //Evaluate the code in the catch statement
+                  Insert(rest*).eval() //Evaluate the code after the catch statement
+                case _ => throw new RuntimeException("No Catch statement!") //We threw an exception without a catch statement
+              }
+          }
+        case Catch(Variable(v), b*) => //Encountering the catch statement like this means that no exception has been thrown, so we do nothing.
           Set()
+        case ThrowException(NewObject(name)) =>
+          throw new templateException(name)
+
 
           
 

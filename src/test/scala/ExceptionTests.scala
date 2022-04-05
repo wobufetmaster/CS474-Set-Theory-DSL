@@ -13,25 +13,18 @@ class ExceptionTests extends AnyFunSuite {
   
   test("Basic Exception Test") {
 
-    Assign("my_var",Set(Value(7))).eval()
-    Assign("result",Set(
-      IF(CheckIf("my_var",Value(7)),
-        Value("the value is 7"), //Should return this, without evaluating the second statement
-        Variable("doesn't exist")))).eval() //If the second statement is evaluated, an error will be thrown*/
+    ExceptionClassDef("myExceptionClass", Extends(None), Constructor()).eval()
+    assertThrows[templateException] {
+      ThrowException(NewObject("myExceptionClass")).eval()
+    }
+    
+    
   }
 
   test("Exceptions in function method") {
 
 
-    ClassDef("myclass",Extends(None),Constructor(),
-      Method("mymethod",Args(),
-        Assign("result",Set(Value(4))),
-        IF(CheckIf("result",Value(4)),
-          Value("result is 4"),
-          Value("result isn't 4")))).eval()
-    Assign("myobject", NewObject("myclass")).eval()
-    Assign("val", Set(InvokeMethod("myobject","mymethod"))).eval()
-    assert(Check("val",Value("result is 4")))
+
 
   }
 

@@ -1,12 +1,16 @@
+package OldTests
+
 import MySetTheoryDSL.*
-import MySetTheoryDSL.setExp.*
-import MySetTheoryDSL.classExp.*
-import MySetTheoryDSL.classBodyExp.*
+import MySetTheoryDSL.Fields.*
 import MySetTheoryDSL.argExp.*
 import MySetTheoryDSL.assignRHS.*
-import MySetTheoryDSL.Fields.*
-import org.scalatest.funsuite.AnyFunSuite
+import MySetTheoryDSL.bExp.*
+import MySetTheoryDSL.classBodyExp.*
+import MySetTheoryDSL.classExp.*
 import MySetTheoryDSL.inheritanceExp.*
+import MySetTheoryDSL.setExp.*
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.funsuite.AnyFunSuite
 
 class BasicTests extends AnyFunSuite {
   
