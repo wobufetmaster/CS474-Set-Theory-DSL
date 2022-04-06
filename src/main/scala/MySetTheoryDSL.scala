@@ -218,7 +218,7 @@ object MySetTheoryDSL:
           object_binding(obj,current_scope.headOption).field_map(fName) = rhs
           Set()
         case GetField(obj, fName) => //Return the value of a field
-          val cur_obj = object_binding(obj,current_scope.headOption)
+          val cur_obj = object_binding(obj, current_scope.find(x => (object_binding get(obj, Some(x))).isDefined))
           val class_name = cur_obj.inheritanceStack.find(x => vmt(x).field_map contains fName).get
           vmt(class_name).field_map(fName).eval()
 
@@ -238,7 +238,7 @@ object MySetTheoryDSL:
           op1.eval().foldLeft(Set())((left_op1, left_op2) => left_op1 | op2.eval().foldLeft(Set())((right_op1, right_op2) => right_op1 | Set(Set(left_op2) | Set(right_op2))))
 
         case InvokeMethod(obj,mName, f_args*) =>
-          val cur_obj = object_binding(obj,current_scope.headOption)
+          val cur_obj = object_binding(obj, current_scope.find(x => (object_binding get(obj, Some(x))).isDefined))
           val class_name = cur_obj.inheritanceStack.find(x => vmt(x).method_map contains mName).get
           if (vmt(class_name).method_map(mName).isAbstract) {throw new RuntimeException("Abstract method called")}
           for (i <- vmt(class_name).method_map(mName).args.indices)
@@ -252,8 +252,12 @@ object MySetTheoryDSL:
           }
         case CatchException(eClass, body*) =>
           if (!vmt(eClass).isException) {throw new RuntimeException("Trying to throw a non exception class")}
-          val catchStmt = body.indexOf(Catch) //Find the index of the catch statement
-          val rest = body.takeRight(catchStmt) //The rest of the code, this needs to get executed after the catch statement.
+          val catchStmt = body.indexWhere(_ match {
+            case Catch(_,_*) => true
+            case _ => false
+          }) //Find the index of the catch statement
+          val rest = body.takeRight(body.length - catchStmt - 1) //The rest of the code, this needs to get executed after the catch statement.
+
           try body.foldLeft(Set())((v1,v2) => v1 | v2.eval()) //Try to evaluate the code as normal
           catch {
             case e: templateException =>

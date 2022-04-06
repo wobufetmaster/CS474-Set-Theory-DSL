@@ -1,5 +1,3 @@
-package OldTests
-
 import MySetTheoryDSL.*
 import MySetTheoryDSL.Fields.*
 import MySetTheoryDSL.argExp.*
@@ -9,7 +7,6 @@ import MySetTheoryDSL.classBodyExp.*
 import MySetTheoryDSL.classExp.*
 import MySetTheoryDSL.inheritanceExp.*
 import MySetTheoryDSL.setExp.*
-import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.funsuite.AnyFunSuite
 
 class BasicTests extends AnyFunSuite {
