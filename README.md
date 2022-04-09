@@ -66,7 +66,20 @@ To declare that you are going to catch thrown instances of the exception class *
 ThrowException(NewObject(name))
 ```
 This will create a new exception object, of type name, and throw it. Execution of the CatchException block
-will stop until an appropriate Catch statement is found that can catch this exception.
+will stop until an appropriate Catch statement is found that can catch this exception. An exception thrown inside
+of a function will propagate outside of the function into the scope it was called. 
+For example:
+```scala
+ClassDef("IHateElephants", Extends(None) , Constructor(),
+      Method("no_elephants", Args("arg1"), //Throws an exception if given an elephant
+        IF(CheckIf("arg1",Value("elephant")), 
+          ThrowException(NewObject("myExceptionClass")), 
+          Value("no elephants here"))) //Value if not given an elephant
+      ).eval()
+```
+In this case, calling no_elephants with argument, "elephant" will throw an exception, and you can catch that
+exception in the context in which the function was called. 
+
 
 If the exception is not caught, because there is no corresponding catch block, or if it was thrown outside of
 a CatchException block, the program will terminate. 
@@ -78,6 +91,15 @@ Catches a thrown exception, and bind the new object to the name v.
 Then it will execute the body of the catch method, b. After that is finished, The remainder of the 
 CatchException block will be executed. If this statement is reached when no exception has been thrown, nothing 
 happens, and the body will not be executed. 
+
+```scala
+Scope("myScope", CatchException("myExceptionClass",
+      InvokeMethod("myObj","no_elephants",Value("elephant")), // Heresy
+      Catch(Variable("e"),
+        AssignField(Object("e"),"reason",Value("there was an elephant"))),
+```
+So this code will catch an exception thrown by the no_elephants method, bind it to the variable "e", and then
+will assign to it's fields.
 
 
 ##How it's implemented. 

@@ -34,23 +34,15 @@ class ExceptionTests extends AnyFunSuite {
 
     ExceptionClassDef("myExceptionClass", Extends(None), Constructor(), Field("reason")).eval()
 
+    Assign("mySet", Set(Scope("myScope", CatchException("myExceptionClass",
+      ThrowException(NewObject("myExceptionClass")), //Throwing the exception skips the next line
+      Variable("does not exist"), //Evaluating this would cause an error.
+      Catch(Variable("e"), Assign("exception",Set(Value("exception occurred")))),
+      Value("return statement") //Executed regardless of exception
+    )))).eval()
 
-    assertThrows[templateException] {
-      ThrowException(NewObject("myExceptionClass")).eval()
-    }
+    assert(Check("mySet", Value("return statement")))
 
-    Assign("exception",Set(Value("no exception"))).eval()
-
-    Scope("myScope", CatchException("myExceptionClass",
-      Assign("mySet",Set(Value("bad"))),
-      IF(CheckIf("mySet",Value("bad")),
-        ThrowException(NewObject("myExceptionClass")),
-        Value(4)),
-      ThrowException(NewObject("non existent class")), //This line shouldn't be executed.
-      Catch(Variable("e"), Assign("exception",Set(Value("exception occurred"))))
-    )).eval()
-
-    assert(Check("exception", Value("exception occurred"),Some("myScope")))
 
 
   }
@@ -81,11 +73,9 @@ class ExceptionTests extends AnyFunSuite {
         AssignField(Object("e"),"reason",Value("there was an elephant"))),
       GetField("e","reason") //Return value of block, will be assigned to mySet
     )))).eval()
-    
-    assert(Check("mySet",Value("there was an elephant")))
 
+    assert(Check("mySet",Value("there was an elephant")))
 
   }
 
-  
 }

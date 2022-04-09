@@ -129,8 +129,6 @@ object MySetTheoryDSL:
         case CheckIf(set_name: String, set_val: setExp) => Check(set_name, set_val, current_scope.headOption)
 
 
-
-
   enum assignRHS: //The value
     case Set(args: setExp)
     case NewObject(name: String)
@@ -176,7 +174,9 @@ object MySetTheoryDSL:
         case Scope(a,b) =>
           current_scope.push(a) //Push current scope onto stack
           val temp = b.eval() //Evaluate rhs
-          current_scope.pop() //Current scope is over - go back to previous scope
+          if (current_scope.headOption.isDefined)
+            current_scope.pop() //Current scope is over - go back to previous scope
+
           temp //Return the evaluated value
         case Assign(name, assignRHS.Set(set)) =>
           scope_map.update((name,current_scope.headOption),set.eval()) //Assign a variable to a set
@@ -232,8 +232,7 @@ object MySetTheoryDSL:
             case _ => false
           }) //Find the index of the catch statement
 
-
-          val rest = body.takeRight(body.length - catchStmt - 1) //The rest of the code, this needs to get executed after the catch statement.
+          val rest = body.takeRight(body.length - catchStmt - 1) //All of the code after the catch statement
 
           try body.foldLeft(Set())((v1,v2) => v1 | v2.eval()) //Try to evaluate the code as normal
           catch {
