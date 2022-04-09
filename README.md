@@ -1,7 +1,7 @@
-# CS474HW3
-##Set theory DSL with abstract classes for CS 474
+# CS474HW4
+##Set theory DSL with if statements and exceptions for CS 474
 Written by Sean Stiely on
-3/17/2022 for CS 474
+4/9/2022 for CS 474
 ##Building and Install:
 You can install this program from [GitHub](https://github.com/wobufetmaster/CS474HW1). (Use the HW3 branch)
 This program is buildable using the sbt. It can be run and built using the commands **sbt clean compile test** and **sbt clean compile run** It is also intelliJ friendly, and can be imported into it 
@@ -25,11 +25,69 @@ in your scala program in order to use the set theory DSL provided here.
 
 ##Foreword 
 As in the last homework, I thought it was important to maintain backwards compatibility with previous versions of the
-DSL. All of the old tests are included, and still work. 
+DSL. All of the old tests are included, and still work. The new tests are in files 
+named **IfTests**, and **ExceptionTests** respectively.
 
 ## If statements
 
+If statements have the syntax: 
 
+```scala
+IF(cond: bExp, thenClause: setExp, elseClause: setExp)
+```
+bExp is a boolean expression that is lazily evaluated when needed. 
+The **thenClause** and **elseClause** are also lazily evaluated, so only one of them will actually be executed, depending 
+on the value of the condition.
+
+```scala
+Assign("my_var",Set(Value(7))).eval()
+    Assign("result",Set(
+      IF(CheckIf("my_var",Value(7)),
+        Value("the value is 7"), //Should return this, without evaluating the second statement
+        Variable("doesn't exist")))).eval() //If the second statement is evaluated, an error will be thrown*/
+```
+
+
+## Exceptions
+
+There are a few different pieces to exceptions. 
+
+First off, **ExceptionClassDef** creates a new exception class. It works the same as
+a regular class definition, the only difference being that it can be thrown and caught.
+
+To declare that a block will attempt to catch a certain exception, 
+you first use 
+```scala
+case CatchException(eClassName: String, body: setExp*)
+```
+To declare that you are going to catch thrown instances of the exception class **eClassName** inside the body.
+
+```scala
+ThrowException(NewObject(name))
+```
+This will create a new exception object, of type name, and throw it. Execution of the CatchException block
+will stop until an appropriate Catch statement is found that can catch this exception.
+
+If the exception is not caught, because there is no corresponding catch block, or if it was thrown outside of
+a CatchException block, the program will terminate. 
+
+```scala
+Catch(Variable(v), b*)
+```
+Catches a thrown exception, and bind the new object to the name v. 
+Then it will execute the body of the catch method, b. After that is finished, The remainder of the 
+CatchException block will be executed. If this statement is reached when no exception has been thrown, nothing 
+happens, and the body will not be executed. 
+
+
+##How it's implemented. 
+
+
+
+Exception classes are represented with the same data structure that represents regular classes,
+there is a new boolean field that specifies if the class is an exception class or not.
+
+This is checked when declaring that a CatchException block to make sure that we are only throwing exception classes.
 
 
 
@@ -201,7 +259,7 @@ Returns the value of the field **fName** in object **obj**.
 
 
 
-**This()** assigns to the current object, and **Object()** specifies which object you want to acess the field of.
+**This()** assigns to the current object, and **Object()** specifies which object you want to access the field of.
 An example: 
 ```scala
 ClassDef("dog",Extends(None),Constructor(AssignField(This(),"tail_size",Insert(Value(4)))),Field("tail_size")).eval()
@@ -214,7 +272,7 @@ Consider the following:
 ClassDef("dog",Extends(None),Constructor(),Method("eat",Args(),Insert(Value("dog food")))).eval()
 ClassDef("beagle",Extends(Some("dog")),Constructor(),Method("eat",Args(),Insert(Value("beagle food")))).eval()
 ```
-The method eat is overriden by the child class beagle, so invoking it on an instance of the beagle object will return "beagle food"
+The method eat is overridden by the child class beagle, so invoking it on an instance of the beagle object will return "beagle food"
 
 ```scala
 ClassDef("dog",Extends(None),Constructor(),Method("eat",Args(),Insert(Value("dog food")))).eval()

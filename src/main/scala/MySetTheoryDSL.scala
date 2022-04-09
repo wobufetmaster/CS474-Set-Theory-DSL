@@ -64,65 +64,44 @@ object MySetTheoryDSL:
           if(vmt(s).method_map(k).isAbstract && !base_map.contains(k))
             throw new RuntimeException("Abstract method not overridden in concrete class")
 
+    def createClass(name: String, myClass: templateClass, parent: inheritanceExp, constructor: Constructor, args: classBodyExp*): Unit =
+      myClass.inheritanceStack.push(name)
+      parent match
+        case Extends(Some(a)) => myClass.inheritanceStack.addAll(vmt(a).inheritanceStack)
+        case Implements(p*) => p.map(e => myClass.inheritanceStack.addAll(vmt(e).inheritanceStack))
+        case _ =>
+      vmt.update(name, myClass)
+
+      current_scope.push(name) //Enter the scope of the constructor
+      args.foreach(a => a.eval()) // Evaluate
+      constructor match
+        case Constructor(cBody*) => cBody.foldLeft(Set())((v1,v2) => v1 | v2.eval()) //Evaluate the constructor
+      current_scope.pop()
+      if (myClass.isAbstract) //If abstract, at least one method must be abstract
+        vmt(name).method_map.values.find(x => x.isAbstract).get
+      else if (!myClass.isInterface)
+        implementsAllMethodsCheck(myClass)
+      circularInheritanceCheck(myClass.inheritanceStack)
+
 
 
     def eval(): Unit =
       this match
         case ClassDef(name, parent, Constructor(cBody*), args*) =>
           val myClass = new templateClass()
-          myClass.inheritanceStack.push(name)
-          parent match
-            case Extends(Some (a)) => myClass.inheritanceStack.addAll(vmt(a).inheritanceStack)
-            case Implements(p*) => p.map(e => myClass.inheritanceStack.addAll(vmt(e).inheritanceStack))
-            case _ =>
-
-          vmt.update(name, myClass)
-          current_scope.push(name) //Enter the scope of the constructor
-          args.map(a => a.eval())
-          cBody.foldLeft(Set())((v1,v2) => v1 | v2.eval()) //Evaluate the constructor
-          current_scope.pop()
-          circularInheritanceCheck(myClass.inheritanceStack)
-          implementsAllMethodsCheck(myClass)
+          createClass(name, myClass, parent, Constructor(cBody*), args*)
 
         case AbstractClassDef(name, Extends(parent), Constructor(cBody*), args*) =>
           val myClass = new templateClass(Abstract = true)
-          myClass.inheritanceStack.push(name)
-          vmt.update(name, myClass)
-          current_scope.push(name) //Enter the scope of the constructor
-          args.map(a => a.eval())
-          cBody.foldLeft(Set())((v1,v2) => v1 | v2.eval()) //Evaluate Constructor
-          current_scope.pop()
-          circularInheritanceCheck(myClass.inheritanceStack)
-          vmt(name).method_map.values.find(x => x.isAbstract).get
+          createClass(name, myClass, Extends(parent), Constructor(cBody*), args*)
 
         case ExceptionClassDef(name, parent, Constructor(cBody*), args*) =>
           val myClass = new templateClass(Exception = true)
-          myClass.inheritanceStack.push(name)
-          parent match
-            case Extends(Some (a)) => myClass.inheritanceStack.addAll(vmt(a).inheritanceStack)
-            case Implements(p*) => p.map(e => myClass.inheritanceStack.addAll(vmt(e).inheritanceStack))
-            case _ =>
-
-          vmt.update(name, myClass)
-          current_scope.push(name) //Enter the scope of the constructor
-          args.foreach(a => a.eval())
-          cBody.foldLeft(Set())((v1,v2) => v1 | v2.eval()) //Evaluate the constructor
-          current_scope.pop()
-          circularInheritanceCheck(myClass.inheritanceStack)
-          implementsAllMethodsCheck(myClass)
+          createClass(name, myClass, parent, Constructor(cBody*), args*)
 
         case Interface(name, Extends(parent),args*) =>
           val myClass = new templateClass(Interface = true)
-          vmt.update(name, myClass)
-          myClass.inheritanceStack.push(name)
-          parent match
-            case Some(str) => myClass.inheritanceStack.addAll(vmt(str).inheritanceStack)
-            case None =>
-          current_scope.push(name) //Enter the scope of the constructor
-          args.map(a => a.eval())
-          current_scope.pop()
-          circularInheritanceCheck(myClass.inheritanceStack)
-
+          createClass(name, myClass, Extends(parent), Constructor(), args*)
 
         case Field(name) => vmt(current_scope.head).field_map.update(name,Insert()) //Update the VMT with the field
         case Method(name,argExp.Args(args*)) => vmt(current_scope.head).method_map.update(name, new templateMethod(args,Seq.empty,true))
@@ -139,14 +118,11 @@ object MySetTheoryDSL:
     case Extends(name: Option[String]) //Only one
 
 
-
   enum classExp:
     case Constructor(body: setExp*) //Only one
 
   enum bExp:
     case CheckIf(set_name: String, set_val: setExp)
-    //case Bool()
-
 
     def eval(): Boolean =
       this match
@@ -182,7 +158,6 @@ object MySetTheoryDSL:
     case Product(op1: setExp, op2: setExp)
     case InvokeMethod(obj: String, mName: String, args: setExp*)
     case GetField(obj: String, fName: String)
-    //case IF(cond: Boolean, thenClause: setExp, elseClause: setExp)
     case IF(cond: bExp, thenClause: setExp, elseClause: setExp)
     case ThrowException(obj: assignRHS.NewObject)
     case Catch(eClassName: Variable, body: setExp*)
@@ -256,11 +231,15 @@ object MySetTheoryDSL:
             case Catch(_,_*) => true
             case _ => false
           }) //Find the index of the catch statement
+
+
           val rest = body.takeRight(body.length - catchStmt - 1) //The rest of the code, this needs to get executed after the catch statement.
 
           try body.foldLeft(Set())((v1,v2) => v1 | v2.eval()) //Try to evaluate the code as normal
           catch {
             case e: templateException =>
+              if (catchStmt == -1)
+                throw new RuntimeException
               body(catchStmt) match {
                 case Catch(Variable(name), cBody*) =>
                   Assign(name, NewObject(e.class_name)).eval()
@@ -286,7 +265,7 @@ object MySetTheoryDSL:
       case None => set_val.eval().subsetOf(scope_map(set_name,current_scope.headOption))
       case Some(value) => set_val.eval().subsetOf(scope_map(set_name,set_scope))
     }
-  def Check(set_val: setExp, set_val2: setExp): Boolean = 
+  def Check(set_val: setExp, set_val2: setExp): Boolean =
     set_val.eval().subsetOf(set_val2.eval())
 
 

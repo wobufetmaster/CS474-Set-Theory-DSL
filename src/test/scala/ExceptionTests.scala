@@ -10,10 +10,31 @@ import MySetTheoryDSL.setExp.*
 import org.scalatest.funsuite.AnyFunSuite
 
 class ExceptionTests extends AnyFunSuite {
+
+  test("Incorrect exceptions") {
+    ExceptionClassDef("myExceptionClass", Extends(None), Constructor(), Field("reason")).eval()
+    ClassDef("notAnExceptionClass", Extends(None), Constructor()).eval()
+
+
+    assertThrows[RuntimeException] { //Throw without a catch statement
+      Scope("myScope",
+        CatchException("myExceptionClass",
+          ThrowException(NewObject("myExceptionClass")))).eval()
+    }
+
+    assertThrows[RuntimeException] { //Catch block with a non exception class
+      Scope("myScope",
+        CatchException("notAnExceptionClass")).eval()
+    }
+
+
+  }
   
   test("Basic Exception Test") {
 
     ExceptionClassDef("myExceptionClass", Extends(None), Constructor(), Field("reason")).eval()
+
+
     assertThrows[templateException] {
       ThrowException(NewObject("myExceptionClass")).eval()
     }
