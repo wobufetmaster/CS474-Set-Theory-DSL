@@ -1,4 +1,4 @@
-import MySetTheoryDSL.*
+import MySetTheoryDSL.{setExp, *}
 import MySetTheoryDSL.Fields.*
 import MySetTheoryDSL.argExp.*
 import MySetTheoryDSL.assignRHS.*
@@ -38,14 +38,14 @@ class ExceptionTests extends AnyFunSuite {
 
     ExceptionClassDef("myExceptionClass", Extends(None), 
       Constructor(
-        AssignField(This(),"reason",Value("no error"))), 
+        AssignField(This(),"reason",Value("no error"))), //Default value
       Field("reason")).eval()
 
     ClassDef("IHateElephants", Extends(None) , Constructor(),
       Method("no_elephants", Args("arg1"), //Throws an exception if given an elephant
         IF(CheckIf("arg1",Value("elephant")), 
           ThrowException(NewObject("myExceptionClass")), 
-          Value("no elephants here")))
+          Value("no elephants here"))) //Value if not given an elephant
       ).eval()
 
     Assign("myObj",NewObject("IHateElephants")).eval()
@@ -53,13 +53,15 @@ class ExceptionTests extends AnyFunSuite {
     Assign("giraffe",Set(InvokeMethod("myObj","no_elephants",Value("giraffe")))).eval() //A giraffe is not an elephant
     assert(Check("giraffe", Value("no elephants here")))
 
-    Scope("myScope", CatchException("myExceptionClass",
-      InvokeMethod("myObj","no_elephants",Value("elephant")),
-      Catch(Variable("e"), AssignField(Object("e"),"Message",Value("there was an elephant")))
-    )).eval()
-    Assign("mySet", Set(Value("there was an elephant"))).eval()
+    Assign("mySet", Set(
+      Scope("myScope", CatchException("myExceptionClass",
+      InvokeMethod("myObj","no_elephants",Value("elephant")), // heresy
+      Catch(Variable("e"),
+        AssignField(Object("e"),"reason",Value("there was an elephant"))),
+      GetField("e","reason") //Return value of block, will be assigned to mySet
+    )))).eval()
     
-
+    assert(Check("mySet",Value("there was an elephant")))
 
 
   }

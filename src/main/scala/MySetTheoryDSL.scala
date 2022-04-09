@@ -265,7 +265,9 @@ object MySetTheoryDSL:
                 case Catch(Variable(name), cBody*) =>
                   Assign(name, NewObject(e.class_name)).eval()
                   Insert(cBody*).eval() //Evaluate the code in the catch statement
-                  Insert(rest*).eval() //Evaluate the code after the catch statement
+                  val retval = Insert(rest*).eval() //Evaluate the code after the catch statement
+                  current_scope.pop()
+                  retval
                 case _ => throw new RuntimeException("No Catch statement!") //We threw an exception without a catch statement
               }
           }
@@ -284,6 +286,8 @@ object MySetTheoryDSL:
       case None => set_val.eval().subsetOf(scope_map(set_name,current_scope.headOption))
       case Some(value) => set_val.eval().subsetOf(scope_map(set_name,set_scope))
     }
+  def Check(set_val: setExp, set_val2: setExp): Boolean = 
+    set_val.eval().subsetOf(set_val2.eval())
 
 
 /*
