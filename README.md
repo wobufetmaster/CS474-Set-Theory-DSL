@@ -35,8 +35,11 @@ If statements have the syntax:
 ```scala
 IF(cond: bExp, thenClause: setExp, elseClause: setExp)
 ```
-bExp is a boolean expression that is lazily evaluated when needed. 
-The **thenClause** and **elseClause** are also lazily evaluated, so only one of them will actually be executed, depending 
+bExp is a boolean expression that is lazily evaluated when needed. This doesn't work with arbitrary boolean expressions, 
+only check statements. I figured that users of the language would primarily want to check the value in sets, and could nest the if statements
+together if they wanted some more compicated conditions and cases. 
+The **thenClause** and **elseClause** are also lazily evaluated, as per the homework description,
+so only one of them will actually be executed, depending 
 on the value of the condition.
 
 ```scala

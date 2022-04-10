@@ -20,6 +20,20 @@ class IfTests extends AnyFunSuite {
       IF(CheckIf("my_var",Value(7)),
         Value("the value is 7"), //Should return this, without evaluating the second statement
         Variable("doesn't exist")))).eval() //If the second statement is evaluated, an error will be thrown*/
+    assert(Check("result",Value("the value is 7")))
+
+
+  }
+
+  test("IF Test with false value") {
+
+    Assign("my_var",Set(Value(7))).eval()
+    Assign("result",Set(
+      IF(CheckIf("my_var",Value(10)), //False condition causes second statement to evaluate
+        Variable("doesn't exist"),
+        Value("the value is not 10")))).eval()
+
+    assert(Check("result",Value("the value is not 10")))
   }
 
   test("IF in function method") {
