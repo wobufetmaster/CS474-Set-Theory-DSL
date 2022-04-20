@@ -12,8 +12,8 @@ class MethodArgumentTests extends AnyFunSuite {
   test("1 Argument Test") {
     ClassDef("dog",Extends(None),Constructor(),Method("eat",Args("food"),Insert(Value("I like to eat: "),Variable("food")))).eval()
 
-    Assign("my_dog",NewObject("dog")).eval()
-    Assign("my_food",Set(InvokeMethod("my_dog","eat",Value("peanut butter")))).eval()
+    Assign("my_dog",NewObject("dog")).strict_eval()
+    Assign("my_food",Set(InvokeMethod("my_dog","eat",Value("peanut butter")))).strict_eval()
 
     assert(Check("my_food",Insert(Value("I like to eat: "),Value("peanut butter"))))
   }
@@ -22,8 +22,8 @@ class MethodArgumentTests extends AnyFunSuite {
     ClassDef("dog",Extends(None),Constructor(),Method("eat",Args("food1","food2","food3"),Insert(Value("My favorite foods are:  "),
       Variable("food1"),Variable("food2"),Variable("food3")))).eval()
 
-    Assign("my_dog",NewObject("dog")).eval()
-    Assign("my_food",Set(InvokeMethod("my_dog","eat",Value("bones"),Value("sausage"),Value("bacon")))).eval()
+    Assign("my_dog",NewObject("dog")).strict_eval()
+    Assign("my_food",Set(InvokeMethod("my_dog","eat",Value("bones"),Value("sausage"),Value("bacon")))).strict_eval()
 
     assert(Check("my_food",Insert(Value("My favorite foods are:  "),Value("bones"),Value("sausage"),Value("bacon"))))
   }
@@ -32,8 +32,8 @@ class MethodArgumentTests extends AnyFunSuite {
     ClassDef("dog",Extends(None),Constructor(),Method("eat",Args("food1","food2","food3"),Insert(Value("My favorite foods are:  "),
       Variable("food1"),Variable("food2"),Variable("food3")))).eval()
 
-    Assign("my_dog",NewObject("dog")).eval()
-    assertThrows[IndexOutOfBoundsException](Assign("my_food",Set(InvokeMethod("my_dog","eat",Value("bones")))).eval()) //Not enough arguments to the method
+    Assign("my_dog",NewObject("dog")).strict_eval()
+    assertThrows[IndexOutOfBoundsException](Assign("my_food",Set(InvokeMethod("my_dog","eat",Value("bones")))).strict_eval()) //Not enough arguments to the method
 
   }
 
@@ -42,9 +42,9 @@ class MethodArgumentTests extends AnyFunSuite {
       Variable("food1"), Variable("food2"), Variable("food3")))).eval()
     ClassDef("beagle", Extends(Some("dog")), Constructor(), Method("eat", Args(), Insert(Value("beagle food")))).eval() //This eat function has no arguments
 
-    Assign("my_dog", NewObject("beagle")).eval()
+    Assign("my_dog", NewObject("beagle")).strict_eval()
 
-    Assign("my_food", Set(InvokeMethod("my_dog", "eat"))).eval() //No arguments, overwritten method takes none
+    Assign("my_food", Set(InvokeMethod("my_dog", "eat"))).strict_eval() //No arguments, overwritten method takes none
 
     assert(Check("my_food", Insert(Value("beagle food"))))
   }
@@ -57,9 +57,9 @@ class MethodArgumentTests extends AnyFunSuite {
 
     ClassDef("beagle",Extends(Some("dog")),Constructor()).eval() //No eat method, use parents
 
-    Assign("my_dog",NewObject("beagle")).eval()
+    Assign("my_dog",NewObject("beagle")).strict_eval()
 
-    Assign("my_food",Set(InvokeMethod("my_dog","eat",Value("bones"),Value("sausage"),Value("bacon")))).eval()
+    Assign("my_food",Set(InvokeMethod("my_dog","eat",Value("bones"),Value("sausage"),Value("bacon")))).strict_eval()
 
     assert(Check("my_food",Insert(Value("My favorite foods are:  "),Value("bones"),Value("sausage"),Value("bacon"))))
 

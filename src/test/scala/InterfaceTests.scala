@@ -14,7 +14,7 @@ class InterfaceTests extends AnyFunSuite {
     Interface("monkey",Extends(None), Method("eat",Args())).eval()
 
     assertThrows[RuntimeException] { //Attempting to instantiate an interface should fail
-      Assign("my_monkey",NewObject("monkey")).eval()
+      Assign("my_monkey",NewObject("monkey")).strict_eval()
     }
 
     assertThrows[RuntimeException] { //Not implementing the abstract method eat
@@ -43,9 +43,9 @@ class InterfaceTests extends AnyFunSuite {
       Method("speak", Args(), Value("bark")), //Overriding abstract methods
       Method("eat", Args(), Value("bugs"))).eval()
 
-    Assign("pet_lemur", NewObject("lemur")).eval()
-    Assign("throw", Set(InvokeMethod("pet_lemur","throw"))).eval()
-    Assign("drink", Set(InvokeMethod("pet_lemur","drink"))).eval()
+    Assign("pet_lemur", NewObject("lemur")).strict_eval()
+    Assign("throw", Set(InvokeMethod("pet_lemur","throw"))).strict_eval()
+    Assign("drink", Set(InvokeMethod("pet_lemur","drink"))).strict_eval()
 
     assert(Check("throw",Value("rock")))
     assert(Check("drink", Value("water")))
@@ -54,8 +54,8 @@ class InterfaceTests extends AnyFunSuite {
       Method("speak", Args(), Value("bark")), //Overriding the default method drink in the animal interface
       Method("drink", Args(), Value("dog water"))).eval()
 
-    Assign("pet_dog", NewObject("dog")).eval()
-    Assign("drink", Set(InvokeMethod("pet_dog","drink"))).eval()
+    Assign("pet_dog", NewObject("dog")).strict_eval()
+    Assign("drink", Set(InvokeMethod("pet_dog","drink"))).strict_eval()
     assert(Check("drink", Value("dog water")))
   }
 
@@ -67,8 +67,8 @@ class InterfaceTests extends AnyFunSuite {
       ClassDef("inner_class", Implements("nested_interface"), Constructor()),
       Method("say_hello",Args(),Assign("inner",NewObject("inner_class")),InvokeMethod("inner","hello"))).eval()
 
-    Assign("my_outer",NewObject("outer")).eval()
-    Assign("my_inner",Set(InvokeMethod("my_outer","say_hello"))).eval()
+    Assign("my_outer",NewObject("outer")).strict_eval()
+    Assign("my_inner",Set(InvokeMethod("my_outer","say_hello"))).strict_eval()
 
     assert(Check("my_inner",Value("hello from the inner interface!")))
 
@@ -84,8 +84,8 @@ class InterfaceTests extends AnyFunSuite {
 
 
     ClassDef("alpha", Implements("silverback"), Constructor()).eval()
-    Assign("my_alpha",NewObject("alpha")).eval()
-    Assign("eat",Set(InvokeMethod("my_alpha","eat"))).eval() //Should invoke the method in the animal class
+    Assign("my_alpha",NewObject("alpha")).strict_eval()
+    Assign("eat",Set(InvokeMethod("my_alpha","eat"))).strict_eval() //Should invoke the method in the animal class
     assert(Check("eat",Value("food")))
 
   }

@@ -41,8 +41,8 @@ class QuestionsTests extends AnyFunSuite {
     Interface("animal", Extends(None), Method("eat",Args(), Value("animal food"))).eval()
     ClassDef("orangutan", Implements("monkey","animal"),Constructor()).eval()
 
-    Assign("pet_monkey",NewObject("orangutan")).eval()
-    Assign("monkey_food",Set(InvokeMethod("pet_monkey","eat"))).eval()
+    Assign("pet_monkey",NewObject("orangutan")).strict_eval()
+    Assign("monkey_food",Set(InvokeMethod("pet_monkey","eat"))).strict_eval()
 
     assert(Check("monkey_food",Value("banana")))
 
@@ -70,8 +70,8 @@ class QuestionsTests extends AnyFunSuite {
     Interface("animal", Extends(None), Method("throw",Args())).eval()
     ClassDef("chimpanzee", Implements("monkey", "animal"), Constructor(), Method("throw", Args(), Value("bugs"))).eval()
 
-    Assign("pet_chimpanzee",NewObject("chimpanzee")).eval()
-    Assign("throws",Set(InvokeMethod("pet_chimpanzee","throw"))).eval()
+    Assign("pet_chimpanzee",NewObject("chimpanzee")).strict_eval()
+    Assign("throws",Set(InvokeMethod("pet_chimpanzee","throw"))).strict_eval()
 
     assert(Check("throws",Value("bugs")))
     //Yes. Once again which default method is used depends on which name comes first in Implements(). 

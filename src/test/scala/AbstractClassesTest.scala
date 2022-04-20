@@ -19,7 +19,7 @@ class AbstractClassesTest extends AnyFunSuite {
     AbstractClassDef("monkey", Extends(None), Constructor(), Method("eat", Args())).eval()
 
     assertThrows[RuntimeException] { //Attempt to instantiate abstract class should fail
-      Assign("pet_monkey", NewObject("monkey")).eval()
+      Assign("pet_monkey", NewObject("monkey")).strict_eval()
     }
 
     assertThrows[RuntimeException] { //Concrete class with an abstract method.
@@ -37,9 +37,9 @@ class AbstractClassesTest extends AnyFunSuite {
     }
 
     ClassDef("gorilla", Extends(Some("monkey")),Constructor(), Method("eat", Args(), Value("meat"))).eval() //Overrides the abstract method.
-    Assign("pet_gorilla", NewObject("gorilla")).eval()
-    Assign("noise", Set(InvokeMethod("pet_gorilla","yell"))).eval() //Use concrete method from abstract class
-    Assign("food", Set(InvokeMethod("pet_gorilla","eat"))).eval() //Use overwritten method in gorilla class
+    Assign("pet_gorilla", NewObject("gorilla")).strict_eval()
+    Assign("noise", Set(InvokeMethod("pet_gorilla","yell"))).strict_eval() //Use concrete method from abstract class
+    Assign("food", Set(InvokeMethod("pet_gorilla","eat"))).strict_eval() //Use overwritten method in gorilla class
 
     assert(Check("noise",Value("monkey noises")))
     assert(Check("food", Value("meat")))
@@ -54,8 +54,8 @@ class AbstractClassesTest extends AnyFunSuite {
       Method("eat", Args())).eval()
     ClassDef("orangutan",Extends(Some("monkey")), Constructor(), Method("eat", Args(), Value("banana"))).eval() 
 
-    Assign("my_orangutan",NewObject("orangutan")).eval()
-    Assign("orangutan_brain",Set(GetField("my_orangutan","brain_size"))).eval()
+    Assign("my_orangutan",NewObject("orangutan")).strict_eval()
+    Assign("orangutan_brain",Set(GetField("my_orangutan","brain_size"))).strict_eval()
 
     assert(Check("orangutan_brain",Value("small")))
     
@@ -72,8 +72,8 @@ class AbstractClassesTest extends AnyFunSuite {
       Method("abstract",Args(),Value("abstract"))), //And that method must be overwritten
       Method("say_hello",Args(),Assign("inner",NewObject("inner_class")),InvokeMethod("inner","hello"))).eval()
 
-    Assign("my_outer",NewObject("outer")).eval()
-    Assign("my_inner",Set(InvokeMethod("my_outer","say_hello"))).eval()
+    Assign("my_outer",NewObject("outer")).strict_eval()
+    Assign("my_inner",Set(InvokeMethod("my_outer","say_hello"))).strict_eval()
 
     assert(Check("my_inner",Value("hello from the inner abstract class!")))
 

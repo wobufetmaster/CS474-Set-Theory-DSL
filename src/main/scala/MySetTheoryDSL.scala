@@ -75,7 +75,7 @@ object MySetTheoryDSL:
       current_scope.push(name) //Enter the scope of the constructor
       args.foreach(a => a.eval()) // Evaluate
       constructor match
-        case Constructor(cBody*) => cBody.foldLeft(Set())((v1,v2) => v1 | v2.eval()) //Evaluate the constructor
+        case Constructor(cBody*) => cBody.foldLeft(Set())((v1,v2) => v1 | v2.strict_eval()) //Evaluate the constructor
       current_scope.pop()
       if (myClass.isAbstract) //If abstract, at least one method must be abstract
         vmt(name).method_map.values.find(x => x.isAbstract).get
@@ -160,26 +160,33 @@ object MySetTheoryDSL:
     case ThrowException(obj: assignRHS.NewObject)
     case Catch(eClassName: Variable, body: setExp*)
     case CatchException(eClassName: String, body: setExp*)
+    case Literal(op1: Set[Any])
 
+    def eval(): Set[Any] | setExp =
+      try
+        this.strict_eval()
+      catch
+        case e: NoSuchElementException => optimize(this)
 
-
-    def eval(): Set[Any] =  //Walks through the AST and returns a set. Set[Any]
+    def strict_eval(): Set[Any] =  //Walks through the AST and returns a set. Set[Any]
       this match
-        case Value(v) => Set(v)
+        case Literal(v) => v
+        case Value(v) => Set(v).flatMap { case x:Iterable[_] => x; case y => Seq(y) }
+
         case Variable(name) => scope_map(name,get_scope(name)) //Lookup value
-        case Macro(a) => macro_map(a).eval() //Lookup macro and execute
+        case Macro(a) => macro_map(a).strict_eval() //Lookup macro and execute
         case CreateMacro(a,b) =>
           macro_map.update(a,b)
           Set()
         case Scope(a,b) =>
           current_scope.push(a) //Push current scope onto stack
-          val temp = b.eval() //Evaluate rhs
-          if (current_scope.headOption.isDefined)
+          val temp = b.strict_eval() //Evaluate rhs
+          if (current_scope.nonEmpty)
             current_scope.pop() //Current scope is over - go back to previous scope
 
           temp //Return the evaluated value
         case Assign(name, assignRHS.Set(set)) =>
-          scope_map.update((name,current_scope.headOption),set.eval()) //Assign a variable to a set
+          scope_map.update((name,current_scope.headOption),set.strict_eval()) //Assign a variable to a set
           Set()
         case Assign(name, assignRHS.NewObject(oName)) => //Assign a variable to a new instance of an object
           if (vmt(oName).isAbstract || vmt(oName).isInterface)
@@ -195,35 +202,35 @@ object MySetTheoryDSL:
         case GetField(obj, fName) => //Return the value of a field
           val cur_obj = object_binding(obj, current_scope.find(x => (object_binding get(obj, Some(x))).isDefined))
           val class_name = cur_obj.inheritanceStack.find(x => vmt(x).field_map contains fName).get
-          vmt(class_name).field_map(fName).eval()
+          vmt(class_name).field_map(fName).strict_eval()
 
-        case Insert(to_insert*) => to_insert.foldLeft(Set())((v1,v2) => v1 | v2.eval())
-        case NestedInsert(to_insert*) => to_insert.foldLeft(Set())((v1,v2) => v1 + v2.eval())
+        case Insert(to_insert*) => to_insert.foldLeft(Set())((v1,v2) => v1 | v2.strict_eval())
+        case NestedInsert(to_insert*) => to_insert.foldLeft(Set())((v1,v2) => v1 + v2.strict_eval())
         case Delete(name) =>
           scope_map.remove(name,get_scope(name))
           Set()
-        case Union(op1, op2) => op1.eval() | op2.eval()
-        case Intersection(op1, op2) => op1.eval() & op2.eval()
-        case Difference(op1, op2) => op1.eval() &~ op2.eval()
+        case Union(op1, op2) => op1.strict_eval() | op2.strict_eval()
+        case Intersection(op1, op2) => op1.strict_eval() & op2.strict_eval()
+        case Difference(op1, op2) => op1.strict_eval() &~ op2.strict_eval()
         case SymmetricDifference(op1, op2) =>
-          val a = op1.eval()
-          val b = op2.eval()
+          val a = op1.strict_eval()
+          val b = op2.strict_eval()
           (a &~ b).union(b &~ a)
         case Product(op1, op2) => //The two foldLeft()'s essentially act as a double for loop, so we can combine every element pairwise.
-          op1.eval().foldLeft(Set())((left_op1, left_op2) => left_op1 | op2.eval().foldLeft(Set())((right_op1, right_op2) => right_op1 | Set(Set(left_op2) | Set(right_op2))))
+          op1.strict_eval().foldLeft(Set())((left_op1, left_op2) => left_op1 | op2.strict_eval().foldLeft(Set())((right_op1, right_op2) => right_op1 | Set(Set(left_op2) | Set(right_op2))))
 
         case InvokeMethod(obj,mName, f_args*) =>
           val cur_obj = object_binding(obj, current_scope.find(x => (object_binding get(obj, Some(x))).isDefined))
           val class_name = cur_obj.inheritanceStack.find(x => vmt(x).method_map contains mName).get
           if (vmt(class_name).method_map(mName).isAbstract) {throw new RuntimeException("Abstract method called")}
           for (i <- vmt(class_name).method_map(mName).args.indices)
-            Scope(obj,Assign(vmt(class_name).method_map(mName).args(i),assignRHS.Set(f_args(i)))).eval()
-          Scope(obj,Insert(vmt(class_name).method_map(mName).body*)).eval()
+            Scope(obj,Assign(vmt(class_name).method_map(mName).args(i),assignRHS.Set(f_args(i)))).strict_eval()
+          Scope(obj,Insert(vmt(class_name).method_map(mName).body*)).strict_eval()
         case IF(cond, c1, c2) =>
           if (cond.eval()) {
-            c1.eval()
+            c1.strict_eval()
           } else {
-            c2.eval()
+            c2.strict_eval()
           }
         case CatchException(eClass, body*) =>
           if (!vmt(eClass).isException) {throw new RuntimeException("Trying to throw a non exception class")}
@@ -234,16 +241,16 @@ object MySetTheoryDSL:
 
           val rest = body.takeRight(body.length - catchStmt - 1) //All of the code after the catch statement
 
-          try body.foldLeft(Set())((v1,v2) => v1 | v2.eval()) //Try to evaluate the code as normal
+          try body.foldLeft(Set())((v1,v2) => v1 | v2.strict_eval()) //Try to evaluate the code as normal
           catch {
             case e: templateException =>
               if (catchStmt == -1)
                 throw new RuntimeException
               body(catchStmt) match {
                 case Catch(Variable(name), cBody*) =>
-                  Assign(name, NewObject(e.class_name)).eval()
-                  Insert(cBody*).eval() //Evaluate the code in the catch statement
-                  val retval = Insert(rest*).eval() //Evaluate the code after the catch statement
+                  Assign(name, NewObject(e.class_name)).strict_eval()
+                  Insert(cBody*).strict_eval() //Evaluate the code in the catch statement
+                  val retval = Insert(rest*).strict_eval() //Evaluate the code after the catch statement
                   current_scope.pop()
                   retval
                 case _ => throw new RuntimeException("No Catch statement!") //We threw an exception without a catch statement
@@ -255,17 +262,51 @@ object MySetTheoryDSL:
           throw new templateException(name)
 
 
-          
 
-  def Condition(condition: => Boolean): Boolean =
-    condition
+  def opOptimize(s: setExp): setExp = //Optimizes two operand operations on two values
+    s match {
+      case Union(Value(a),Value(b)) => Value(a,b)
+      case Difference(Insert(a*),Insert(b*)) =>
+        Insert(a*).eval() match
+          case _: setExp => s
+          case v1: Set[Any] => Insert(b*).eval() match
+            case _: setExp => s
+            case v2: Set[Any] => Literal(v1 &~ v2)
+      case Intersection(Value(a),Value(b)) => Value(a,b)
+      case SymmetricDifference(Value(a),Value(b)) => Value(a,b)
+      case Product(Value(a),Value(b)) => Value(a,b)
+      case _ => s
+    }
+
+  val opt1: setExp => setExp = map(opOptimize,_) //The three optimizations, implemented with map
+  val opt2: setExp => setExp = map(opOptimize,_)
+  val opt3: setExp => setExp = map(opOptimize,_)
+
+  val optimize: setExp => setExp = opt1 andThen opt2 andThen opt3
+
+
+  def map(f: setExp => setExp, s: setExp): setExp = //Apply to every element in container, works recursively
+    f(s) match //We only need to consider setExp's that contain other setExp's
+      case AssignField(obj: Fields, fName: String, rhs: setExp) => AssignField(obj, fName, map(f,rhs))
+      case CreateMacro(name: String, op2: setExp) => CreateMacro(name, map(f,op2))
+      case Scope(name: String, op2: setExp) => Scope(name, map(f,op2))
+      case Insert(op*) => Insert(op.map(f)*) //Note that this is the scala map function, not ours!
+      case NestedInsert(op*) => NestedInsert(op.map(f)*)
+      case Union(op1: setExp, op2: setExp) => Union(map(f,op1),map(f,op2))
+      case Intersection(op1: setExp, op2: setExp) => Intersection(map(f,op1),map(f,op2))
+      case Difference(op1: setExp, op2: setExp) => Difference(map(f,op1),map(f,op2))
+      case SymmetricDifference(op1: setExp, op2: setExp) => SymmetricDifference(map(f,op1),map(f,op2))
+      case Product(op1: setExp, op2: setExp) => Product(map(f,op1),map(f,op2))
+      case IF(cond: bExp, thenClause: setExp, elseClause: setExp)=> IF(cond, map(f, thenClause),map(f, elseClause))
+      case _ => f(s) //We've reached the bottom, no more nested setExp's
+
   def Check(set_name: String, set_val: setExp, set_scope: Option[String] = None): Boolean =   //the Scope can be optionally supplied, or global scope will be used if omitted.
     set_scope match {
-      case None => set_val.eval().subsetOf(scope_map(set_name,current_scope.headOption))
-      case Some(value) => set_val.eval().subsetOf(scope_map(set_name,set_scope))
+      case None => set_val.strict_eval().subsetOf(scope_map(set_name,current_scope.headOption))
+      case Some(value) => set_val.strict_eval().subsetOf(scope_map(set_name,set_scope))
     }
-  def Check(set_val: setExp, set_val2: setExp): Boolean =
-    set_val.eval().subsetOf(set_val2.eval())
+/*  def Check(set_val: setExp, set_val2: setExp): Boolean =
+    set_val.eval().subsetOf(set_val2.eval())*/
 
 
 /*

@@ -19,12 +19,12 @@ class ExceptionTests extends AnyFunSuite {
     assertThrows[RuntimeException] { //Throw without a catch statement
       Scope("myScope",
         CatchException("myExceptionClass",
-          ThrowException(NewObject("myExceptionClass")))).eval()
+          ThrowException(NewObject("myExceptionClass")))).strict_eval()
     }
 
     assertThrows[RuntimeException] { //Catch block with a non exception class
       Scope("myScope",
-        CatchException("notAnExceptionClass")).eval()
+        CatchException("notAnExceptionClass")).strict_eval()
     }
 
 
@@ -39,7 +39,7 @@ class ExceptionTests extends AnyFunSuite {
       Variable("does not exist"), //Evaluating this would cause an error.
       Catch(Variable("e"), Assign("exception",Set(Value("exception occurred")))),
       Value("return statement") //Executed regardless of exception
-    )))).eval()
+    )))).strict_eval()
 
     assert(Check("mySet", Value("return statement")))
 
@@ -61,9 +61,9 @@ class ExceptionTests extends AnyFunSuite {
           Value("no elephants here"))) //Value if not given an elephant
       ).eval()
 
-    Assign("myObj",NewObject("IHateElephants")).eval()
+    Assign("myObj",NewObject("IHateElephants")).strict_eval()
 
-    Assign("giraffe",Set(InvokeMethod("myObj","no_elephants",Value("giraffe")))).eval() //A giraffe is not an elephant
+    Assign("giraffe",Set(InvokeMethod("myObj","no_elephants",Value("giraffe")))).strict_eval() //A giraffe is not an elephant
     assert(Check("giraffe", Value("no elephants here")))
 
     Assign("mySet", Set(
@@ -72,7 +72,7 @@ class ExceptionTests extends AnyFunSuite {
       Catch(Variable("e"),
         AssignField(Object("e"),"reason",Value("there was an elephant"))),
       GetField("e","reason") //Return value of block, will be assigned to mySet
-    )))).eval()
+    )))).strict_eval()
 
     assert(Check("mySet",Value("there was an elephant")))
 

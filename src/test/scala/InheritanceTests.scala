@@ -13,8 +13,8 @@ class InheritanceTests extends AnyFunSuite {
     ClassDef("dog",Extends(None),Constructor(),Method("eat",Args(),Insert(Value("dog food")))).eval()
     ClassDef("beagle",Extends(Some("dog")),Constructor(),Method("eat",Args(),Insert(Value("beagle food")))).eval()
 
-    Assign("my_dog",NewObject("beagle")).eval()
-    Assign("my_food",Set(InvokeMethod("my_dog","eat"))).eval()
+    Assign("my_dog",NewObject("beagle")).strict_eval()
+    Assign("my_food",Set(InvokeMethod("my_dog","eat"))).strict_eval()
 
     assert(Check("my_food",Insert(Value("beagle food"))))
   }
@@ -23,8 +23,8 @@ class InheritanceTests extends AnyFunSuite {
     ClassDef("dog",Extends(None),Constructor(),Method("eat",Args(),Insert(Value("dog food")))).eval()
     ClassDef("beagle",Extends(Some("dog")),Constructor()).eval() //Note that there is no eat function anymore
 
-    Assign("my_dog",NewObject("beagle")).eval()
-    Assign("my_food",Set(InvokeMethod("my_dog","eat"))).eval()
+    Assign("my_dog",NewObject("beagle")).strict_eval()
+    Assign("my_food",Set(InvokeMethod("my_dog","eat"))).strict_eval()
 
     assert(Check("my_food",Insert(Value("dog food"))))
   }
@@ -35,8 +35,8 @@ class InheritanceTests extends AnyFunSuite {
     ClassDef("beagle",Extends(Some("dog")), Constructor(
       AssignField(This(),"name",Insert(Value("Daisy")))),Field("name")).eval()
 
-    Assign("my_dog",NewObject("beagle")).eval()
-    Assign("dog_name",Set(GetField("my_dog","name"))).eval()
+    Assign("my_dog",NewObject("beagle")).strict_eval()
+    Assign("dog_name",Set(GetField("my_dog","name"))).strict_eval()
 
     assert(Check("dog_name",Value("Daisy")))
   }
@@ -45,8 +45,8 @@ class InheritanceTests extends AnyFunSuite {
       AssignField(This(),"name",Insert(Value("doggy")))),Field("name")).eval()
     ClassDef("beagle",Extends(Some("dog")),Constructor()).eval() //No constructor or field, both are inherited from parent
 
-    Assign("my_dog",NewObject("beagle")).eval()
-    Assign("dog_name",Set(GetField("my_dog","name"))).eval()
+    Assign("my_dog",NewObject("beagle")).strict_eval()
+    Assign("dog_name",Set(GetField("my_dog","name"))).strict_eval()
 
     assert(Check("dog_name",Value("doggy"))) //Should have the default value given by the constructor of the parent class
   }

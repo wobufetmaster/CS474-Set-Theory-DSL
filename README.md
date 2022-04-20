@@ -21,6 +21,40 @@ import org.scalatest.funsuite.AnyFunSuite
 ```
 in your scala program in order to use the set theory DSL provided here.
 
+
+
+##New in HW5: Partial evaluation and optimization! 
+
+##Foreword
+In all of the homeworks in this class, I have tried to maintain backwards compatibility with older version of the software. 
+I thought that this was important because I was hired for a job that involves quite a bit of legacy code, and I wanted to get experience 
+in maintaining backwards compatibility with newer versions of software that has newer features. 
+When I first saw that the return type of eval was being changed, I thought that there would be no way for me to maintain backwards compatibility, and I was going to have
+to rewrite all of the tests. However, I did figure out a way to do this (with a little help from intelliJ). 
+
+##Implementation
+The way that I maintained backwards compatibility was to use intelliJ to rename the previously defined **eval** function, to **strict_eval**. 
+eval allows environmental variables to be undefined, while strict_eval requires that all of the environmental variables be defined, or else an exception is thrown. 
+All of the previous tests now call strict_eval instead of eval. 
+
+**strict_eval** is the same as **eval** from previous assignments, with no changes. I thought that eval worked fine as an interpreter for the DSL expressions, and that the tests
+ensured that it worked well. I figured that if it worked correctly, there was no sense in modifying it, and that it would
+make much more sense to just wrap it in a function that provided the additional functionality that was required for this homework.
+
+Throwing exceptions when undefined variables were encountered is required in order for those tests to work 
+correctly, so this was the only way that I could find to maintain this backwards compatibility. 
+
+In a real world setting, what I would probably do instead is have **eval** be unchanged, and then have a **lazy_eval** wrapper that makes the environmental variable values optional, 
+as this would not require the old code to change **eval** to **strict_eval**, however the assignment description states very clearly that eval should have the return type 
+**setExp | Set[Any]**, so I have done it this way instead.
+
+There is only one new test file this time, **PartialEvalTests**. There is tests for the optimizations, as well as the partial evaluations of programs. 
+
+
+
+
+
+
 ##New in HW4: If statements and error handling!
 
 ##Foreword 

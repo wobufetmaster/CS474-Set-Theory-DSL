@@ -6,7 +6,6 @@ import MySetTheoryDSL.classBodyExp.*
 import MySetTheoryDSL.classExp.*
 import MySetTheoryDSL.inheritanceExp.*
 import MySetTheoryDSL.setExp.*
-import MySetTheoryDSL.Condition
 import MySetTheoryDSL.bExp.*
 
 import org.scalatest.funsuite.AnyFunSuite
@@ -15,11 +14,11 @@ class IfTests extends AnyFunSuite {
   
   test("Basic IF Test") {
 
-    Assign("my_var",Set(Value(7))).eval()
+    Assign("my_var",Set(Value(7))).strict_eval()
     Assign("result",Set(
       IF(CheckIf("my_var",Value(7)),
         Value("the value is 7"), //Should return this, without evaluating the second statement
-        Variable("doesn't exist")))).eval() //If the second statement is evaluated, an error will be thrown*/
+        Variable("doesn't exist")))).strict_eval() //If the second statement is evaluated, an error will be thrown*/
     assert(Check("result",Value("the value is 7")))
 
 
@@ -27,11 +26,11 @@ class IfTests extends AnyFunSuite {
 
   test("IF Test with false value") {
 
-    Assign("my_var",Set(Value(7))).eval()
+    Assign("my_var",Set(Value(7))).strict_eval()
     Assign("result",Set(
       IF(CheckIf("my_var",Value(10)), //False condition causes second statement to evaluate
         Variable("doesn't exist"),
-        Value("the value is not 10")))).eval()
+        Value("the value is not 10")))).strict_eval()
 
     assert(Check("result",Value("the value is not 10")))
   }
@@ -45,8 +44,8 @@ class IfTests extends AnyFunSuite {
         IF(CheckIf("result",Value(4)),
           Value("result is 4"),
           Value("result isn't 4")))).eval()
-    Assign("myobject", NewObject("myclass")).eval()
-    Assign("val", Set(InvokeMethod("myobject","mymethod"))).eval()
+    Assign("myobject", NewObject("myclass")).strict_eval()
+    Assign("val", Set(InvokeMethod("myobject","mymethod"))).strict_eval()
     assert(Check("val",Value("result is 4")))
 
   }
