@@ -263,24 +263,41 @@ object MySetTheoryDSL:
 
 
 
-  def opOptimize(s: setExp): setExp = //Optimizes two operand operations on two values
+  //If op1 and op2 can be totally evaluated, apply the optimization, otherwise return the default value
+  def applyOrElse(op1: setExp, op2: setExp, default: setExp, fn: (Set[Any], Set[Any]) => Set[Any]): setExp =
+    try
+      val set1 = op1.strict_eval()
+      val set2 = op2.strict_eval()
+      Literal(fn(set1,set2))
+    catch
+      case e: NoSuchElementException => default
+
+
+  def binaryOptimize(s: setExp): setExp = //Optimizes 2 input functions where all sub expressions can be evaluated
     s match {
-      case Union(Value(a),Value(b)) => Value(a,b)
-      case Difference(Insert(a*),Insert(b*)) =>
-        Insert(a*).eval() match
-          case _: setExp => s
-          case v1: Set[Any] => Insert(b*).eval() match
-            case _: setExp => s
-            case v2: Set[Any] => Literal(v1 &~ v2)
-      case Intersection(Value(a),Value(b)) => Value(a,b)
-      case SymmetricDifference(Value(a),Value(b)) => Value(a,b)
-      case Product(Value(a),Value(b)) => Value(a,b)
+      case Union(a, b) => applyOrElse(a,b,s, _ | _)
+      case Difference(a,b) => applyOrElse(a,b,s, _ &~ _)
+      case Intersection(a,b) => applyOrElse(a,b,s, _ & _)
+      case SymmetricDifference(a,b) => applyOrElse(a,b,s, (v , v2) => (v &~ v2).union(v2 &~ v))
       case _ => s
     }
 
-  val opt1: setExp => setExp = map(opOptimize,_) //The three optimizations, implemented with map
-  val opt2: setExp => setExp = map(opOptimize,_)
-  val opt3: setExp => setExp = map(opOptimize,_)
+  def IntersectionOptimize(s: setExp): setExp = //Optimizes 2 input functions where all sub expressions can be evaluated
+    s match {
+      case Intersection(Variable(a),Variable(b)) => if (a == b) then Variable(a) else s
+      case _ => s
+    }
+
+  def DiffOptimize(s: setExp): setExp = //Optimizes 2 input functions where all sub expressions can be evaluated
+    s match
+      case Difference(Variable(a),Variable(b)) => if (a == b) then Value(()) else s
+      case _ => s
+
+
+
+  val opt1: setExp => setExp = map(IntersectionOptimize,_) //The three optimizations, implemented with map
+  val opt2: setExp => setExp = map(DiffOptimize,_)
+  val opt3: setExp => setExp = map(binaryOptimize,_)
 
   val optimize: setExp => setExp = opt1 andThen opt2 andThen opt3
 

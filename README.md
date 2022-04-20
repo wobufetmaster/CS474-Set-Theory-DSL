@@ -39,7 +39,8 @@ All of the previous tests now call strict_eval instead of eval.
 
 **strict_eval** is the same as **eval** from previous assignments, with no changes. I thought that eval worked fine as an interpreter for the DSL expressions, and that the tests
 ensured that it worked well. I figured that if it worked correctly, there was no sense in modifying it, and that it would
-make much more sense to just wrap it in a function that provided the additional functionality that was required for this homework.
+make much more sense to just wrap it in a function that provided the additional functionality that was required for this homework. I think that
+this also does a good job of cleanly separating the code for partial evaluation and optimization.
 
 Throwing exceptions when undefined variables were encountered is required in order for those tests to work 
 correctly, so this was the only way that I could find to maintain this backwards compatibility. 
@@ -50,6 +51,48 @@ as this would not require the old code to change **eval** to **strict_eval**, ho
 
 There is only one new test file this time, **PartialEvalTests**. There is tests for the optimizations, as well as the partial evaluations of programs. 
 
+##Partial evaluation
+
+
+##The map function
+The map function has signature:   
+```scala
+  def map(f: setExp => setExp, s: setExp): setExp = //Apply to every element in container, works recursively
+```
+It takes a function from setExp's to setExp's and recursively applies it to every sub expression in s, and then returns the result.
+
+
+##The optimizations
+
+
+```scala
+val opt1: setExp => setExp = map(varOptimize,_) //The three optimizations, implemented with map
+val opt2: setExp => setExp = map(DiffOptimize,_)
+val opt3: setExp => setExp = map(opOptimize,_)
+
+val optimize: setExp => setExp = opt1 andThen opt2 andThen opt3
+```
+There are three optimizations: 
+
+**binaryOptimize** looks at the binary operations, **Union** **Difference**, **Intersection** and **SymmetricDifference**, and if both of the inputs to these operations can be evaluated
+completely, then that block is replaced with the value that is the result of performing the operation. 
+Consider: 
+```scala
+Difference(
+        Insert(Value(1),Value(2),Value(3)),
+        Insert(Value(2),Value(3),Value(4)))
+```
+Both of the **Insert**'s can be completely evaluated, so the optimizing function will replace this block with **Value(1)**
+
+**IntersectionOptimize** 
+
+
+**DiffOptimize**
+
+```scala
+val r = Intersection(Variable("Undefined"), Variable("Undefined"))
+assert(r.eval() == Variable("Undefined"))
+```
 
 
 
