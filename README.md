@@ -1,9 +1,9 @@
 # CS474HW4
-##Set theory DSL with if statements and exceptions for CS 474
+##Set theory DSL for CS 474
 Written by Sean Stiely on
-4/9/2022 for CS 474
+4/21/2022 for CS 474
 ##Building and Install:
-You can install this program from [GitHub](https://github.com/wobufetmaster/CS474HW1). (Use the HW4 branch)
+You can install this program from [GitHub](https://github.com/wobufetmaster/CS474HW1). (Use the HW5 branch)
 This program is buildable using the sbt. It can be run and built using the commands **sbt clean compile test** and **sbt clean compile run** It is also intelliJ friendly, and can be imported into it 
 easily. 
 Make sure to include these files in your project, and
@@ -53,6 +53,18 @@ There is only one new test file this time, **PartialEvalTests**. There is tests 
 
 ##Partial evaluation
 
+If a program cannot be evaluated completely, (because it has undefined variables) a partially evaluated program is returned instead. With the optimization functions applied to it.
+
+```scala
+assert(Variable("undefined").eval() == Variable("undefined"))
+```
+If the program can be evaluated all the way, then eval will return a set representing the value of the program.
+
+```scala
+Assign("total_eval",Set(Value(4))).eval() //This code can be evaluated fine.
+assert(Check("total_eval",Value(4)))
+```
+
 
 ##The map function
 The map function has signature:   
@@ -61,21 +73,19 @@ The map function has signature:
 ```
 It takes a function from setExp's to setExp's and recursively applies it to every sub expression in s, and then returns the result.
 
-
 ##The optimizations
 
-
 ```scala
-val opt1: setExp => setExp = map(varOptimize,_) //The three optimizations, implemented with map
+val opt1: setExp => setExp = map(IntersectionOptimize,_) //The three optimizations, implemented with map
 val opt2: setExp => setExp = map(DiffOptimize,_)
-val opt3: setExp => setExp = map(opOptimize,_)
+val opt3: setExp => setExp = map(binaryOptimize,_)
 
 val optimize: setExp => setExp = opt1 andThen opt2 andThen opt3
 ```
 There are three optimizations: 
 
 **binaryOptimize** looks at the binary operations, **Union** **Difference**, **Intersection** and **SymmetricDifference**, and if both of the inputs to these operations can be evaluated
-completely, then that block is replaced with the value that is the result of performing the operation. 
+completely, then that block is replaced with the value that is the result of performing the operation.
 Consider: 
 ```scala
 Difference(
@@ -86,8 +96,7 @@ Both of the **Insert**'s can be completely evaluated, so the optimizing function
 
 **IntersectionOptimize** 
 
-
-**DiffOptimize**
+This function replaces the intersection of two variables that are the same, with just that variable. 
 
 ```scala
 val r = Intersection(Variable("Undefined"), Variable("Undefined"))
@@ -95,7 +104,33 @@ assert(r.eval() == Variable("Undefined"))
 ```
 
 
+**DiffOptimize**
 
+This optimization replaces the difference of two sets that are the same with the empty set. 
+
+```scala
+val r = Difference(Variable("Undefined"), Variable("Undefined"))
+assert(r.eval() == Value(()))
+```
+
+**binaryOptimize** cannot optimize undefined variables, while the other two optimizations can, so **binaryOptimize** is run last out of all of these. 
+consider: 
+```scala
+
+val r = Union(
+  Intersection(
+    Difference(
+      Intersection(Variable("Undefined"), Variable("Undefined")),
+      Intersection(Variable("Undefined"), Variable("Undefined"))),
+    Difference(
+      Intersection(Variable("Undefined"), Variable("Undefined")),
+      Intersection(Variable("Undefined"), Variable("Undefined")))),
+  Value(3))
+
+assert(r.eval() == Literal(Set((), 3)))
+```
+The Intersections are optimized first, Replacing them with the pure variables, then the Differences are optimized, creating empty sets. 
+Finally, The Union is optimized. 
 
 
 ##New in HW4: If statements and error handling!

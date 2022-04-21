@@ -29,7 +29,7 @@ object MySetTheoryDSL:
   private val macro_map: collection.mutable.Map[String, setExp] = collection.mutable.Map()
   private val scope_map: collection.mutable.Map[(String,Option[String]), Set[Any]] = collection.mutable.Map()
   private val current_scope: mutable.Stack[String] = new mutable.Stack[String]()
-  private val exception_handlers: mutable.Stack[String] = new mutable.Stack[String]()
+
 
 
   private val vmt: collection.mutable.Map[String, templateClass] = collection.mutable.Map() //Virtual method table
@@ -166,7 +166,9 @@ object MySetTheoryDSL:
       try
         this.strict_eval()
       catch
-        case e: NoSuchElementException => optimize(this)
+        case e: NoSuchElementException =>
+          current_scope.popAll() //Clear out the scopes
+          optimize(this)
 
     def strict_eval(): Set[Any] =  //Walks through the AST and returns a set. Set[Any]
       this match
@@ -307,7 +309,7 @@ object MySetTheoryDSL:
       case AssignField(obj: Fields, fName: String, rhs: setExp) => AssignField(obj, fName, map(f,rhs))
       case CreateMacro(name: String, op2: setExp) => CreateMacro(name, map(f,op2))
       case Scope(name: String, op2: setExp) => Scope(name, map(f,op2))
-      case Insert(op*) => Insert(op.map(f)*) //Note that this is the scala map function, not ours!
+      case Insert(op*) => Insert(op.map( map(f,_))*) //Note that we are using both our map function and the scala map function here.
       case NestedInsert(op*) => NestedInsert(op.map(f)*)
       case Union(op1: setExp, op2: setExp) => Union(map(f,op1),map(f,op2))
       case Intersection(op1: setExp, op2: setExp) => Intersection(map(f,op1),map(f,op2))

@@ -17,18 +17,18 @@ class PartialEvalTests extends AnyFunSuite {
 
     val s = Insert(Variable("no"),Variable("nada"),Variable("nil"))
 
-    assert(s == s.eval())
+    assert(s == s.eval()) //No optimizations can be performed on this code
 
-    Assign("total_eval",Set(Value(4))).eval()
 
-    assert(Check("total_eval",Value(4)))
 
 
 
   }
 
-  test("More complicated partial eval") {
+  test("Complete eval") {
+    Assign("total_eval",Set(Value(4))).eval() //This code can be evaluated fine.
 
+    assert(Check("total_eval",Value(4)))
 
   }
 
@@ -66,7 +66,18 @@ class PartialEvalTests extends AnyFunSuite {
 
   }
   test("All optimizations together") {
+    import scala.collection.immutable.Set
+    val r = Union(
+      Intersection(
+        Difference(
+          Intersection(Variable("Undefined"), Variable("Undefined")),
+          Intersection(Variable("Undefined"), Variable("Undefined"))),
+        Difference(
+          Intersection(Variable("Undefined"), Variable("Undefined")),
+          Intersection(Variable("Undefined"), Variable("Undefined")))),
+      Value(3))
 
+    assert(r.eval() == Literal(Set((), 3)))
   }
 
   
