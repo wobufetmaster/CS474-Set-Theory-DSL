@@ -3,7 +3,6 @@ import MySetTheoryDSL.classBodyExp.ExceptionClassDef
 import MySetTheoryDSL.inheritanceExp.{Extends, Implements}
 import MySetTheoryDSL.classExp.Constructor
 import MySetTheoryDSL.setExp.*
-
 import scala.collection.mutable
 
 
@@ -29,8 +28,7 @@ object MySetTheoryDSL:
   private val macro_map: collection.mutable.Map[String, setExp] = collection.mutable.Map()
   private val scope_map: collection.mutable.Map[(String,Option[String]), Set[Any]] = collection.mutable.Map()
   private val current_scope: mutable.Stack[String] = new mutable.Stack[String]()
-
-
+  
 
   private val vmt: collection.mutable.Map[String, templateClass] = collection.mutable.Map() //Virtual method table
   private val object_binding: collection.mutable.Map[(String,Option[String]), templateClass] = collection.mutable.Map() //Binds names to instances of objects
@@ -82,8 +80,7 @@ object MySetTheoryDSL:
       else if (!myClass.isInterface)
         implementsAllMethodsCheck(myClass)
       circularInheritanceCheck(myClass.inheritanceStack)
-
-
+    
 
     def eval(): Unit =
       this match
@@ -160,21 +157,16 @@ object MySetTheoryDSL:
     case ThrowException(obj: assignRHS.NewObject)
     case Catch(eClassName: Variable, body: setExp*)
     case CatchException(eClassName: String, body: setExp*)
-    case Literal(op1: Set[Any])
 
     def eval(): Set[Any] | setExp =
       try
         this.strict_eval()
-      catch
-        case e: NoSuchElementException =>
-          current_scope.popAll() //Clear out the scopes
-          optimize(this)
+      catch //NoSuchElement is only thrown when acessing undefined variables
+        case e: NoSuchElementException => optimize(this)
 
     def strict_eval(): Set[Any] =  //Walks through the AST and returns a set. Set[Any]
       this match
-        case Literal(v) => v
         case Value(v) => Set(v).flatMap { case x:Iterable[_] => x; case y => Seq(y) }
-
         case Variable(name) => scope_map(name,get_scope(name)) //Lookup value
         case Macro(a) => macro_map(a).strict_eval() //Lookup macro and execute
         case CreateMacro(a,b) =>
@@ -263,14 +255,13 @@ object MySetTheoryDSL:
         case ThrowException(NewObject(name)) =>
           throw new templateException(name)
 
-
-
+  
   //If op1 and op2 can be totally evaluated, apply the optimization, otherwise return the default value
   def applyOrElse(op1: setExp, op2: setExp, default: setExp, fn: (Set[Any], Set[Any]) => Set[Any]): setExp =
     try
       val set1 = op1.strict_eval()
       val set2 = op2.strict_eval()
-      Literal(fn(set1,set2))
+      Value(fn(set1,set2))
     catch
       case e: NoSuchElementException => default
 
@@ -286,16 +277,15 @@ object MySetTheoryDSL:
 
   def IntersectionOptimize(s: setExp): setExp = //Optimizes 2 input functions where all sub expressions can be evaluated
     s match {
-      case Intersection(Variable(a),Variable(b)) => if (a == b) then Variable(a) else s
+      case Intersection(Variable(a),Variable(b)) => if a == b then Variable(a) else s
       case _ => s
     }
 
   def DiffOptimize(s: setExp): setExp = //Optimizes 2 input functions where all sub expressions can be evaluated
     s match
-      case Difference(Variable(a),Variable(b)) => if (a == b) then Value(()) else s
+      case Difference(Variable(a),Variable(b)) => if a == b then Value(()) else s
       case _ => s
-
-
+  
 
   val opt1: setExp => setExp = map(IntersectionOptimize,_) //The three optimizations, implemented with map
   val opt2: setExp => setExp = map(DiffOptimize,_)
@@ -324,21 +314,6 @@ object MySetTheoryDSL:
       case None => set_val.strict_eval().subsetOf(scope_map(set_name,current_scope.headOption))
       case Some(value) => set_val.strict_eval().subsetOf(scope_map(set_name,set_scope))
     }
-/*  def Check(set_val: setExp, set_val2: setExp): Boolean =
-    set_val.eval().subsetOf(set_val2.eval())*/
-
-
-/*
-  def IFfunc(condition: => Boolean, thenClause: => Set[Any], elseClause: => Set[Any]): Set[Any] =
-    if condition then thenClause else elseClause
-  end IFfunc
-*/
-
 
   @main def runSetExp(): Unit =
-    import setExp.*
-
-
-
-
-
+    ()

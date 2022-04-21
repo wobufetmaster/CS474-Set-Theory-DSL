@@ -36,7 +36,7 @@ class PartialEvalTests extends AnyFunSuite {
     import scala.collection.immutable.Set
 
     val s = Insert(Union(Value("cat"),Value("dog")),Variable("Undefined"))
-    assert(s.eval() == Insert(Literal(Set("cat","dog")), Variable("Undefined")))
+    assert(s.eval() == Insert(Value(Set("cat","dog")), Variable("Undefined")))
 
     val r = Insert(
       Difference(
@@ -44,7 +44,7 @@ class PartialEvalTests extends AnyFunSuite {
         Insert(Value(2),Value(3),Value(4))), Variable("Undefined"))
 
 
-    assert(r.eval() == Insert(Literal(Set(1)),Variable("Undefined")))
+    assert(r.eval() == Insert(Value(Set(1)),Variable("Undefined")))
   }
   test("Optimization 2 test") {
     import scala.collection.immutable.Set
@@ -77,7 +77,7 @@ class PartialEvalTests extends AnyFunSuite {
           Intersection(Variable("Undefined"), Variable("Undefined")))),
       Value(3))
 
-    assert(r.eval() == Literal(Set((), 3)))
+    assert(r.eval() == Value(Set((), 3)))
   }
 
   
