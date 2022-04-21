@@ -129,7 +129,7 @@ val r = Union(
 
 assert(r.eval() == Value(Set((), 3)))
 ```
-The Intersections are optimized first, Replacing them with the pure variables, then the Differences are optimized, creating empty sets. 
+The Intersections are optimized first, Replacing them with just **Variable("Undefined")**, then the Differences are optimized, creating empty sets. 
 Finally, The Union is optimized, because both of its arguments can be fully evaluated. 
 
 
