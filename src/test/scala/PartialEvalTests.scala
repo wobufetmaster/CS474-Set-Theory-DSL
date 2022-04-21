@@ -30,6 +30,14 @@ class PartialEvalTests extends AnyFunSuite {
 
     assert(Check("total_eval",Value(4)))
 
+    Assign("mySet",Set(Insert(Assign("myOtherSet",Set(Value("set"))),Value("myVal")))).eval()
+
+
+    assert(Check("mySet",Value("myVal")))
+
+    assert(Check("myOtherSet",Value("set")))
+
+
   }
 
   test("Optimization 1 test") {
